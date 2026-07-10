@@ -1,0 +1,31 @@
+oscp_imu_node:
+  ros__parameters:
+    device: "/dev/ttyUSB0"
+    baudrate: 921600
+    frame_id: "imu_link"
+    pub_accel_in_g: false
+
+    operating_mode: "MEDIUM"
+
+    gyro_range: "DPS_250"
+    accel_range: "G_4"
+    incl_range: "G_1_0"
+
+    gyro_filter_mode: "LP_AND_HP"
+    gyro_lpf: "C0"
+    gyro_hpf: "C1"
+
+    accel_filter_mode: "LP_ONLY"
+    accel_lpf: "C0"
+    accel_hpf: "C0"
+
+    ahrs_convention: "NWU"
+    ahrs_heading: "INTERNAL_MAGNETOMETER"
+
+    misalignment: true
+
+    standard_ros_enabled: true
+    oscp_raw_enabled: true
+    oscp_euler_enabled: true
+    oscp_quat_enabled: true
+    oscp_rotation_matrix_enabled: true

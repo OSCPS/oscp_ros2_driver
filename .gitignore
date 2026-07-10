@@ -1,0 +1,39 @@
+# Build directories
+build/
+install/
+log/
+cmake-build-*/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj*
+*.filters
+
+# VSCode
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.o
+*.obj
+*.a
+
+# Logs
+*.log
+
+# Temporary
+*.tmp

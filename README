@@ -1,0 +1,111 @@
+# OSCP IMU ROS2 Driver (oscp_imu_ros2)
+
+A configurable ROS 2 IMU driver supporting multiple output formats including raw IMU data, quaternion, Euler angles, rotation matrix, and standard ROS `sensor_msgs/Imu`.
+
+---
+
+## Installation
+
+Clone and build inside your ROS 2 workspace:
+
+Clone inside your ROS 2 workspace:
+
+```bash
+cd ~/ros2_ws/src
+
+git clone https://github.com/yourusername/oscp_imu_ros2.git
+
+```
+Install dependencies
+
+```bash
+cd ..
+
+rosdep update
+
+rosdep install --from-paths src -y --ignore-src --rosdistro $ROS_DISTRO
+
+```
+Build and source workspace 
+
+```bash
+
+colcon build --packages-up-to oscp_imu_ros2 --symlink-install
+
+source install/setup.bash
+```
+---
+
+## Usage
+
+Launch the IMU node using yaml configurations:
+
+```bash
+ros2 launch oscp_imu_ros2 oscp_imu.launch.py config_file:=test.yaml
+```
+
+---
+
+## Launch Configuration
+
+### Core Device Settings
+
+- device (default: `/dev/ttyUSB0`)
+  Serial port used by the IMU
+
+- baudrate (default: `921600`)
+  Serial communication speed
+
+- frame_id (default: `imu_link`)
+  TF frame used in published messages
+
+---
+
+### Config File
+
+- config_file (default: `imu_test_preset.yaml`)
+  Located in `oscp_imu_ros2/config/`
+
+---
+
+### Output Flags
+
+- pub_accel_in_g (default: false)
+- oscp_raw_enabled (default: true)
+- oscp_quat_enabled (default: true)
+- oscp_euler_enabled (default: true)
+- oscp_rotation_matrix_enabled (default: true)
+- standard_ros_enabled (default: true)
+
+---
+
+## Topics
+
+### Raw Outputs
+- /oscp/raw
+- /oscp/quat
+- /oscp/euler
+- /oscp/rot
+
+### ROS Standard
+- /oscp/imu/data (sensor_msgs/Imu)
+- /ocsp/imu/mag (sensor_msgs/Mag)
+- /oscp/imu/temp (sensor_msgs/Temp)
+
+---
+
+## Features
+
+- Multi-format IMU output
+- ROS 2 native integration
+- Configurable runtime parameters
+- Lightweight serial driver
+- Supports multiple IMU telemetry modes
+
+---
+
+## License
+
+MIT License
+
+
