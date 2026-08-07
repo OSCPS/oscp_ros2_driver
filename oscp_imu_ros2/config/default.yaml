@@ -1,0 +1,35 @@
+oscp_imu_node:
+  ros__parameters:
+    transport: "RS422"
+    device: "/dev/ttyUSB0"
+    baudrate: 921600
+    frame_id: "imu_link"
+    pub_accel_in_g: false
+
+    operating_mode: "MEDIUM"
+
+    publish_standard_ros: true           # Default: True
+    publish_oscp_raw: true               # Default: True
+    publish_oscp_euler: true            # Default: False
+    publish_oscp_quat: true              # Default: True
+    publish_oscp_rotation_matrix: true  # Default: False
+
+    watchdog_timeout_ms: 1000.0
+    parser_stats_log_interval_s: 0.0
+
+    gyro_range: "DPS_250"
+    accel_range: "G_4"
+    incl_range: "G_0_5"
+
+    gyro_filter_mode: "DISABLED"
+    gyro_lpf: "C0"
+    gyro_hpf: "C0"
+
+    accel_filter_mode: "DISABLED"
+    accel_lpf: "C0"
+    accel_hpf: "C0"
+
+    ahrs_convention: "NWU"
+    ahrs_heading_source: "NONE"
+
+    misalignment: true

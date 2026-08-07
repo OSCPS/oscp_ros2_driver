@@ -13,15 +13,29 @@
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>tf2</depend>
 
   <!-- Threading -->
   <depend>libstdcxx</depend>
 
-  <!-- Custom messages -->
+  <!-- Custom libraries -->
   <depend>oscp_msgs</depend>
   <depend>oscp_libraries</depend>
+  <depend>motion_cal_wrapper</depend>
+
+  <!-- Services -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  
+  <!-- Action -->
+  <build_depend>rclcpp_action</build_depend>
+  <exec_depend>rclcpp_action</exec_depend>
+  <depend>action_msgs</depend>
+  <depend>unique_identifier_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
   </export>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
 </package>
