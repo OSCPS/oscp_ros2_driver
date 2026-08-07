@@ -1,0 +1,13 @@
+# Goal
+bool start
+---
+# Result
+bool success
+float32 hard_iron_x
+float32 hard_iron_y
+float32 hard_iron_z
+float32 fit_error
+---
+# Feedback
+float32 progress
+string status
