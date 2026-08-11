@@ -95,12 +95,6 @@ ros2 topic echo /oscp/raw --qos-profile sensor_data
 
 ## Debugging & CLI Examples
 
-- Send magnetometer calibration action and follow feedback:
-
-```bash
-ros2 action send_goal /oscp/magnetometer_calibration oscp_imu_calibration/action/MagnetometerCalibration "{start: true}" --feedback
-```
-
 - Dump node parameters:
 
 ```bash

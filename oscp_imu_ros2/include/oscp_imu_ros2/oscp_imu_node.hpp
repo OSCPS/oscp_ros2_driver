@@ -11,6 +11,7 @@
 #include <termios.h>
 #include <thread>
 #include <cstdint>
+#include <filesystem>
 #include <tf2/LinearMath/Quaternion.h>
 
 // ROS Messages includes
@@ -27,17 +28,17 @@
 
 // OSCP Specific Includes
 #include "oscp_imu_ros2/oscp_imu_config.hpp"
-#include "oscp_imu_ros2/mag_calibration_helper.hpp"
 #include "oscp_imu_ros2/oscp_imu_startup_info.hpp"
 
 // Actions and services includes
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
+#include "magcal_wrapper/action/magnetometer_calibration.hpp"
 
 #include <oscp_imu_ros2/srv/stationary_calibrate.hpp>
 #include <oscp_imu_ros2/srv/zero_orientation.hpp>
 #include "oscp_imu_ros2/srv/get_imu_config.hpp"
-#include <motion_cal_wrapper/action/magnetometer_calibration.hpp>
+#include "oscp_imu_ros2/srv/apply_mag_config.hpp"
 
 extern "C" {
 #include "oscp_imu.h"
@@ -48,7 +49,7 @@ class OSCPIMUNode : public rclcpp::Node {
 
 public:
     // Namespace for Less Verbosity
-    using MagnetometerCalibration = motion_cal_wrapper::action::MagnetometerCalibration;
+    using MagnetometerCalibration = magcal_wrapper::action::MagnetometerCalibration;
     using GoalHandleMagCal = rclcpp_action::ServerGoalHandle<MagnetometerCalibration>;
 
     /* Constructor */
@@ -102,9 +103,6 @@ private:
     rclcpp::TimerBase::SharedPtr parser_stats_timer_;
     double watchdog_timeout_ms_{10000.0};  // milliseconds before shutdown
     double parser_stats_log_interval_s_{5.0};
-
-    // Magnetometer Calibration
-    oscp_imu::MagCalibrationHelper mag_calibrator_;
 
     // Publishers
     rclcpp::TimerBase::SharedPtr timer_;
@@ -179,20 +177,17 @@ private:
     void stationary_calibration_worker(double duration);
     void stationary_calibrate_callback(const std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Request> request, std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Response> response);
 
-    void zero_rotation(float current[3][3], float corrected[3][3]);
+    void zero_orientation(float current[3][3], float corrected[3][3]);
     void zero_orientation_callback(const std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Request> request, std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Response> response);
+
+    void apply_mag_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Request> request,std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Response> response);
 
     rclcpp::Service<oscp_imu_ros2::srv::StationaryCalibrate>::SharedPtr stationary_calibration_service_;
     rclcpp::Service<oscp_imu_ros2::srv::ZeroOrientation>::SharedPtr zero_orientation_service_;
     rclcpp::Service<oscp_imu_ros2::srv::GetIMUConfig>::SharedPtr config_service_;
-    
-    // Action Functions
-    void handle_mag_accept(const std::shared_ptr<GoalHandleMagCal> goal_handle);
-    void execute_mag_calibration( const std::shared_ptr<GoalHandleMagCal> goal_handle);   
+    rclcpp::Service<oscp_imu_ros2::srv::ApplyMagConfig>::SharedPtr apply_mag_config_service_;
 
-    rclcpp_action::Server<MagnetometerCalibration>::SharedPtr mag_calibration_server_;
-    rclcpp_action::GoalResponse handle_mag_goal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const MagnetometerCalibration::Goal> goal);
-    rclcpp_action::CancelResponse handle_mag_cancel(const std::shared_ptr<GoalHandleMagCal> goal_handle);
+
 };
 
 #endif // OSCP_IMU_ROS2_OSCP_IMU_NODE_HPP

@@ -10,6 +10,8 @@
 #include <sys/ioctl.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <yaml-cpp/yaml.h>
+#include <stdexcept>
 
 // OSCP Specific Includes
 #include "oscp_imu_ros2/oscp_imu_param_translator.hpp"
@@ -19,40 +21,130 @@
 /* Constuctor */
 OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
     // Default values for initialization that wont work without being set by the user
-    declare_parameter("device", std::string(""));
-    declare_parameter("baudrate", -1);
-    declare_parameter("frame_id", std::string(""));
-    declare_parameter("pub_standard_ros_accel_in_g", false);
-    declare_parameter("transport",oscp_imu::toString(config_.transport));
+    rcl_interfaces::msg::ParameterDescriptor device_desc;
+    device_desc.description = "Serial device path (RS422) or CAN interface name (CAN-FD)";
+    declare_parameter("device", std::string(""), device_desc);
 
-    declare_parameter("operating_mode", oscp_imu::toString(config_.operating_mode));
+    rcl_interfaces::msg::ParameterDescriptor baudrate_desc;
+    baudrate_desc.description = "Baud rate for RS422 transport (ignored for CAN-FD)";
+    declare_parameter("baudrate", -1, baudrate_desc);
 
-    declare_parameter("gyro_range", oscp_imu::toString(config_.gyro_range));
-    declare_parameter("accel_range", oscp_imu::toString(config_.accel_range));
-    declare_parameter("incl_range", oscp_imu::toString(config_.incl_range));
+    rcl_interfaces::msg::ParameterDescriptor frame_id_desc;
+    frame_id_desc.description = "TF frame ID stamped on all published IMU/sensor messages";
+    declare_parameter("frame_id", std::string(""), frame_id_desc);
 
-    declare_parameter("gyro_filter_mode", oscp_imu::toString(config_.gyro_filter_mode));
-    declare_parameter("gyro_lpf", oscp_imu::toString(config_.gyro_lpf));
-    declare_parameter("gyro_hpf", oscp_imu::toString(config_.gyro_hpf));
+    rcl_interfaces::msg::ParameterDescriptor pub_accel_g_desc;
+    pub_accel_g_desc.description = "Publish standard ROS Imu linear_acceleration in g instead of m/s^2";
+    declare_parameter("pub_standard_ros_accel_in_g", false, pub_accel_g_desc);
 
-    declare_parameter("misalignment_correction", config_.misalignment_correction);
+    rcl_interfaces::msg::ParameterDescriptor transport_desc;
+    transport_desc.description = "Physical transport used to talk to the IMU";
+    transport_desc.additional_constraints = "Valid values: RS422, CANFD";
+    declare_parameter("transport", oscp_imu::toString(config_.transport), transport_desc);
 
-    declare_parameter("accel_filter_mode", oscp_imu::toString(config_.accel_filter_mode));
-    declare_parameter("accel_lpf", oscp_imu::toString(config_.accel_lpf));
-    declare_parameter("accel_hpf", oscp_imu::toString(config_.accel_hpf));
+    rcl_interfaces::msg::ParameterDescriptor operating_mode_desc;
+    operating_mode_desc.description = "IMU output data rate mode";
+    operating_mode_desc.additional_constraints = "Valid values: IDLE (0Hz), LOW (100Hz), MEDIUM (500Hz raw / 100Hz AHRS)";
+    declare_parameter("operating_mode", oscp_imu::toString(config_.operating_mode), operating_mode_desc);
 
-    declare_parameter("ahrs_convention", oscp_imu::toString(config_.ahrs_convention));
-    declare_parameter("ahrs_heading_source", oscp_imu::toString(config_.ahrs_heading));
-    
-    declare_parameter<bool>("publish_standard_ros", config_.publish_standard_ros);
-    declare_parameter<bool>("publish_oscp_raw", config_.publish_oscp_raw);
-    declare_parameter<bool>("publish_oscp_euler", config_.publish_oscp_euler);
-    declare_parameter<bool>("publish_oscp_quat", config_.publish_oscp_quat);
-    declare_parameter<bool>("publish_oscp_rotation_matrix", config_.publish_oscp_rot);
-    declare_parameter<bool>("publish_oscp_gnss", config_.publish_oscp_gnss);
+    rcl_interfaces::msg::ParameterDescriptor gyro_range_desc;
+    gyro_range_desc.description = "MEMS gyroscope dynamic range (deg/sec)";
+    gyro_range_desc.additional_constraints = "Valid values: DPS_125, DPS_250, DPS_500, DPS_1000, DPS_2000, DPS_4000";
+    declare_parameter("gyro_range", oscp_imu::toString(config_.gyro_range), gyro_range_desc);
 
-    declare_parameter<double>("watchdog_timeout_ms", config_.watchdog_timeout_ms_);
-    declare_parameter<double>("parser_stats_log_interval_s", parser_stats_log_interval_s_);
+    rcl_interfaces::msg::ParameterDescriptor accel_range_desc;
+    accel_range_desc.description = "Accelerometer dynamic range (g)";
+    accel_range_desc.additional_constraints = "Valid values: G_2, G_4, G_8, G_16";
+    declare_parameter("accel_range", oscp_imu::toString(config_.accel_range), accel_range_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor incl_range_desc;
+    incl_range_desc.description = "Inclinometer dynamic range (g)";
+    incl_range_desc.additional_constraints = "Valid values: G_0_5, G_1_0, G_2_0, G_3_0";
+    declare_parameter("incl_range", oscp_imu::toString(config_.incl_range), incl_range_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor gyro_filter_mode_desc;
+    gyro_filter_mode_desc.description = "MEMS gyroscope filter mode";
+    gyro_filter_mode_desc.additional_constraints = "Valid values: DISABLED, LP_ONLY, HP_ONLY, LP_AND_HP";
+    declare_parameter("gyro_filter_mode", oscp_imu::toString(config_.gyro_filter_mode), gyro_filter_mode_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor gyro_lpf_desc;
+    gyro_lpf_desc.description = "MEMS gyroscope low-pass filter cutoff selector";
+    gyro_lpf_desc.additional_constraints = "Valid values: C0-C7. E.g. C0: 33-222Hz, C7: 11.6-12.6Hz (Low/Medium ODR)";
+    declare_parameter("gyro_lpf", oscp_imu::toString(config_.gyro_lpf), gyro_lpf_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor gyro_hpf_desc;
+    gyro_hpf_desc.description = "MEMS gyroscope high-pass filter cutoff selector";
+    gyro_hpf_desc.additional_constraints = "Valid values: C0: 16mHz, C1: 65mHz, C2: 260mHz, C3: 1.04Hz (C4-C7 reserved for gyro HPF)";
+    declare_parameter("gyro_hpf", oscp_imu::toString(config_.gyro_hpf), gyro_hpf_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor misalignment_desc;
+    misalignment_desc.description = "Enable factory misalignment correction for gyroscopes and accelerometers";
+    declare_parameter("misalignment_correction", config_.misalignment_correction, misalignment_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor accel_filter_mode_desc;
+    accel_filter_mode_desc.description = "Accelerometer filter mode";
+    accel_filter_mode_desc.additional_constraints = "Valid values: DISABLED, LP_ONLY, HP_ONLY (no LP_AND_HP for accel)";
+    declare_parameter("accel_filter_mode", oscp_imu::toString(config_.accel_filter_mode), accel_filter_mode_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor accel_lpf_desc;
+    accel_lpf_desc.description = "Accelerometer low-pass filter cutoff selector";
+    accel_lpf_desc.additional_constraints = "Valid values: C0-C7. E.g. C0: 26-208.25Hz, C7: 0.13-1.04Hz (Low/Medium ODR)";
+    declare_parameter("accel_lpf", oscp_imu::toString(config_.accel_lpf), accel_lpf_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor accel_hpf_desc;
+    accel_hpf_desc.description = "Accelerometer high-pass filter cutoff selector";
+    accel_hpf_desc.additional_constraints = "Valid values: C0-C7, shares the same cutoff table as accel_lpf";
+    declare_parameter("accel_hpf", oscp_imu::toString(config_.accel_hpf), accel_hpf_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor ahrs_convention_desc;
+    ahrs_convention_desc.description = "AHRS earth axis convention (register FCO)";
+    ahrs_convention_desc.additional_constraints = "Valid values: NWU, ENU, NED";
+    declare_parameter("ahrs_convention", oscp_imu::toString(config_.ahrs_convention), ahrs_convention_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor ahrs_heading_desc;
+    ahrs_heading_desc.description = "AHRS heading source (register FHS)";
+    ahrs_heading_desc.additional_constraints = "Valid values: NONE, INTERNAL_MAGNETOMETER";
+    declare_parameter("ahrs_heading_source", oscp_imu::toString(config_.ahrs_heading), ahrs_heading_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor pub_standard_ros_desc;
+    pub_standard_ros_desc.description = "Publish standard sensor_msgs (Imu, MagneticField, Temperature)";
+    declare_parameter<bool>("publish_standard_ros", config_.publish_standard_ros, pub_standard_ros_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor pub_oscp_raw_desc;
+    pub_oscp_raw_desc.description = "Publish raw OSCP frame (61 bytes: gyro/accel/mag/incl/temp)";
+    declare_parameter<bool>("publish_oscp_raw", config_.publish_oscp_raw, pub_oscp_raw_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor pub_oscp_euler_desc;
+    pub_oscp_euler_desc.description = "Publish OSCP Euler angle frame (25 bytes, ZYX convention)";
+    declare_parameter<bool>("publish_oscp_euler", config_.publish_oscp_euler, pub_oscp_euler_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor pub_oscp_quat_desc;
+    pub_oscp_quat_desc.description = "Publish OSCP quaternion frame (29 bytes, order w,x,y,z)";
+    declare_parameter<bool>("publish_oscp_quat", config_.publish_oscp_quat, pub_oscp_quat_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor pub_oscp_rot_desc;
+    pub_oscp_rot_desc.description = "Publish OSCP rotation matrix frame (49 bytes, 3x3 row-major)";
+    declare_parameter<bool>("publish_oscp_rotation_matrix", config_.publish_oscp_rot, pub_oscp_rot_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor pub_oscp_gnss_desc;
+    pub_oscp_gnss_desc.description = "Publish OSCP GNSS frame (64 bytes, requires optional GNSS-equipped unit)";
+    declare_parameter<bool>("publish_oscp_gnss", config_.publish_oscp_gnss, pub_oscp_gnss_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor watchdog_desc;
+    watchdog_desc.description = "Max time in ms with no frames received before the node shuts itself down";
+    rcl_interfaces::msg::FloatingPointRange watchdog_range;
+    watchdog_range.from_value = 0.0;
+    watchdog_range.to_value = 60000.0;
+    watchdog_desc.floating_point_range.push_back(watchdog_range);
+    declare_parameter<double>("watchdog_timeout_ms", config_.watchdog_timeout_ms_, watchdog_desc);
+
+    rcl_interfaces::msg::ParameterDescriptor parser_stats_desc;
+    parser_stats_desc.description = "Interval in seconds between parser stats log prints (0 disables)";
+    rcl_interfaces::msg::FloatingPointRange parser_stats_range;
+    parser_stats_range.from_value = 0.0;
+    parser_stats_range.to_value = 300.0;
+    parser_stats_desc.floating_point_range.push_back(parser_stats_range);
+    declare_parameter<double>("parser_stats_log_interval_s", parser_stats_log_interval_s_, parser_stats_desc);
 
     config_.device = this->get_parameter("device").as_string();
     config_.baudrate = static_cast<int>(this->get_parameter("baudrate").as_int());
@@ -127,11 +219,8 @@ OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
     stationary_calibration_service_ = create_service<oscp_imu_ros2::srv::StationaryCalibrate>("oscp/stationary_calibrate",std::bind(&OSCPIMUNode::stationary_calibrate_callback,this,std::placeholders::_1,std::placeholders::_2));
     zero_orientation_service_ = create_service<oscp_imu_ros2::srv::ZeroOrientation>("oscp/zero_orientation",std::bind(&OSCPIMUNode::zero_orientation_callback,this,std::placeholders::_1,std::placeholders::_2));
     config_service_ = this->create_service<oscp_imu_ros2::srv::GetIMUConfig>("/oscp/get_config",std::bind(&OSCPIMUNode::get_config_callback,this,std::placeholders::_1,std::placeholders::_2));
-
-    // Action Server Initialization
-    mag_calibration_server_ = rclcpp_action::create_server<MagnetometerCalibration>(this,"oscp/magnetometer_calibration", std::bind(&OSCPIMUNode::handle_mag_goal,this,std::placeholders::_1,std::placeholders::_2),
-    std::bind(&OSCPIMUNode::handle_mag_cancel,this,std::placeholders::_1), std::bind(&OSCPIMUNode::handle_mag_accept,this,std::placeholders::_1));
-
+    apply_mag_config_service_ = this->create_service<oscp_imu_ros2::srv::ApplyMagConfig>("~/oscp/apply_mag_config",std::bind(&OSCPIMUNode::apply_mag_config_callback,this,std::placeholders::_1,std::placeholders::_2));
+    
     // Internal Functions
     if (config_.transport == oscp_imu::Transport::CANFD) {
         fd_ = socket(PF_CAN, SOCK_RAW, CAN_RAW);
@@ -774,13 +863,6 @@ void OSCPIMUNode::publish_raw_frame() {
     raw_msg.incl_x = raw.incl_x;
     raw_msg.incl_y = raw.incl_y;
 
-    if (mag_calibrating_.load()) {
-        std::lock_guard<std::mutex> lock(mag_calibrator_.mag_samples_mutex);
-        mag_calibrator_.mag_x_samples.push_back(raw.mag_x);
-        mag_calibrator_.mag_y_samples.push_back(raw.mag_y);
-        mag_calibrator_.mag_z_samples.push_back(raw.mag_z);
-    }
-
     raw_msg.mag_x = raw.mag_x;
     raw_msg.mag_y = raw.mag_y;
     raw_msg.mag_z = raw.mag_z;
@@ -836,7 +918,6 @@ void OSCPIMUNode::publish_quat_frame() {
     quat_frame_pub_->publish(quat_msg);
 }
 
-
 void OSCPIMUNode::publish_euler_frame() {
     oscp_euler_t e_local;
     {
@@ -869,7 +950,6 @@ void OSCPIMUNode::publish_euler_frame() {
     euler_frame_pub_->publish(euler_msg);
 }
 
-
 void OSCPIMUNode::publish_rot_frame() {
     oscp_rot_mat_t rm_local;
     {
@@ -891,7 +971,7 @@ void OSCPIMUNode::publish_rot_frame() {
     memcpy(rm_arr, rm_local.rm, sizeof(rm_arr));
 
     if (rotation_zeroed_) {
-        zero_rotation(rm_arr, corrected);
+        zero_orientation(rm_arr, corrected);
     } else {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -1195,6 +1275,18 @@ bool OSCPIMUNode::stationary_calibrate(double duration) {
     return true;
 }
 
+void OSCPIMUNode::stationary_calibration_worker(double duration) {
+    bool success = stationary_calibrate(duration);
+
+    if (success) {
+        RCLCPP_INFO(get_logger(), "Stationary calibration completed successfully");
+    } else {
+        RCLCPP_WARN(get_logger(), "Stationary calibration failed");
+    }
+
+    stationary_calibration_active_.store(false);
+}
+
 void OSCPIMUNode::stationary_calibrate_callback(const std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Request> request,
     std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Response> response) {
     if (stationary_calibration_thread_.joinable()) {
@@ -1214,7 +1306,7 @@ void OSCPIMUNode::stationary_calibrate_callback(const std::shared_ptr<oscp_imu_r
     response->message = "Stationary calibration started";
 }
 
-void OSCPIMUNode::zero_rotation(float current[3][3], float corrected[3][3]) {
+void OSCPIMUNode::zero_orientation(float current[3][3], float corrected[3][3]) {
     float result[3][3];
 
     // corrected = zero^T * current
@@ -1233,18 +1325,6 @@ void OSCPIMUNode::zero_rotation(float current[3][3], float corrected[3][3]) {
             corrected[i][j] = result[i][j];
         }
     }
-}
-
-void OSCPIMUNode::stationary_calibration_worker(double duration) {
-    bool success = stationary_calibrate(duration);
-
-    if (success) {
-        RCLCPP_INFO(get_logger(), "Stationary calibration completed successfully");
-    } else {
-        RCLCPP_WARN(get_logger(), "Stationary calibration failed");
-    }
-
-    stationary_calibration_active_.store(false);
 }
 
 void OSCPIMUNode::zero_orientation_callback(const std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Request> request, std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Response> response) {
@@ -1310,146 +1390,142 @@ void OSCPIMUNode::zero_orientation_callback(const std::shared_ptr<oscp_imu_ros2:
     }
 }
 
-/* Action Functions */
-void OSCPIMUNode::handle_mag_accept(const std::shared_ptr<GoalHandleMagCal> goal_handle) {
-    if (mag_calibration_thread_.joinable()) {
-        if (mag_calibrating_.load()) {
-            RCLCPP_ERROR(get_logger(), "Magnetometer calibration already active");
-            return;
-        }
-        mag_calibration_thread_.join();
+void OSCPIMUNode::apply_mag_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Request> request, std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Response> response) {
+    if (request->config_path.empty()) {
+        response->success = false;
+        response->message = "Config path is empty.";
+        return;
     }
 
-    mag_calibration_thread_ = std::thread(
-        &OSCPIMUNode::execute_mag_calibration, this, goal_handle);
-}
+    const std::filesystem::path config_path(request->config_path);
 
-void OSCPIMUNode::execute_mag_calibration(const std::shared_ptr<GoalHandleMagCal> goal_handle) {
-    RCLCPP_INFO(this->get_logger(), "Starting magnetometer calibration");
+    if (!std::filesystem::exists(config_path)) {
+        response->success = false;
+        response->message = "Magnetometer configuration file does not exist: " + config_path.string();
 
-    auto feedback = std::make_shared<MagnetometerCalibration::Feedback>();
-    auto action_result = std::make_shared<MagnetometerCalibration::Result>();
-
-    // Clear old samples
-    mag_calibrator_.mag_x_samples.clear();
-    mag_calibrator_.mag_y_samples.clear();
-    mag_calibrator_.mag_z_samples.clear();
-
-    // Enable collection inside publish_raw_frame()
-    mag_calibrating_.store(true);
-
-    std::vector<float> mag_x_copy;
-    std::vector<float> mag_y_copy;
-    std::vector<float> mag_z_copy;
-
-    float gap = 9999.0f;
-
-    while (rclcpp::ok()) {
-        // Allow cancel
-        if (goal_handle->is_canceling()) {
-            mag_calibrating_.store(false);
-
-            action_result->success = false;
-            goal_handle->canceled(action_result);
-
-            return;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(mag_calibrator_.mag_samples_mutex);
-            mag_x_copy = mag_calibrator_.mag_x_samples;
-            mag_y_copy = mag_calibrator_.mag_y_samples;
-            mag_z_copy = mag_calibrator_.mag_z_samples;
-        }
-
-        if (mag_x_copy.size() > 20) {
-            auto estimate = mag_calibrator_.estimate_bias(mag_x_copy, mag_y_copy, mag_z_copy);
-            gap = mag_calibrator_.compute_gap(mag_x_copy, mag_y_copy, mag_z_copy, estimate.offset_x, estimate.offset_y, estimate.offset_z);
-        }
-
-        feedback->progress = gap;
-        feedback->status = "collecting";
-        goal_handle->publish_feedback(feedback);
-
-        // Stop once the user supplied threshold is reached
-        if (gap <= mag_calibrator_.target_gap) {
-            break;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        RCLCPP_ERROR(this->get_logger(),"%s", response->message.c_str());
+        return;
     }
 
-    // Stop collecting samples
-    mag_calibrating_.store(false);
+    RCLCPP_INFO(this->get_logger(), "Applying magnetometer configuration from: %s", request->config_path.c_str());
 
-    {
-        std::lock_guard<std::mutex> lock(mag_calibrator_.mag_samples_mutex);
-        mag_x_copy = mag_calibrator_.mag_x_samples;
-        mag_y_copy = mag_calibrator_.mag_y_samples;
-        mag_z_copy = mag_calibrator_.mag_z_samples;
+    try {
+        // Load YAML configuration
+
+        YAML::Node config = YAML::LoadFile(request->config_path);
+
+        if (!config["magnetometer"]) {
+            throw std::runtime_error("Missing 'magnetometer' section.");
+        }
+        const auto mag = config["magnetometer"];
+
+        if (!mag["hard_iron"]) {
+            throw std::runtime_error("Missing 'magnetometer.hard_iron'.");
+        }
+
+        if (!mag["soft_iron"]) {
+            throw std::runtime_error("Missing 'magnetometer.soft_iron'.");
+        }
+
+        // Read hard-iron offsets
+        const float mxb = mag["hard_iron"]["x"].as<float>();
+        const float myb = mag["hard_iron"]["y"].as<float>();
+        const float mzb = mag["hard_iron"]["z"].as<float>();
+
+        // Read soft-iron matrix
+        // [ MXX  MXY  MXZ ]
+        // [ MYX  MYY  MYZ ]
+        // [ MZX  MZY  MZZ ]
+
+        const auto soft_iron = mag["soft_iron"];
+
+        if (!soft_iron.IsSequence() || soft_iron.size() != 3) {
+            throw std::runtime_error("'soft_iron' must be a 3x3 matrix.");
+        }
+
+        for (const auto& row : soft_iron) {
+            if (!row.IsSequence() || row.size() != 3) {
+                throw std::runtime_error(
+                    "'soft_iron' must be a 3x3 matrix."
+                );
+            }
+        }
+
+        const float mxx = soft_iron[0][0].as<float>();
+        const float mxy = soft_iron[0][1].as<float>();
+        const float mxz = soft_iron[0][2].as<float>();
+
+        const float myx = soft_iron[1][0].as<float>();
+        const float myy = soft_iron[1][1].as<float>();
+        const float myz = soft_iron[1][2].as<float>();
+
+        const float mzx = soft_iron[2][0].as<float>();
+        const float mzy = soft_iron[2][1].as<float>();
+        const float mzz = soft_iron[2][2].as<float>();
+
+        // Log what is about to be written
+
+        RCLCPP_INFO(this->get_logger(),"Hard iron: [%f, %f, %f]",mxb, myb, mzb);
+
+        RCLCPP_INFO(this->get_logger(),"Soft iron:");
+        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mxx, mxy, mxz);
+        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",myx, myy, myz);
+        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mzx, mzy, mzz);
+
+        // Write magnetometer calibration registers
+
+        write_float_register(OSCP_USR_REG_MXB,mxb);
+        write_float_register(OSCP_USR_REG_MYB,myb);
+        write_float_register(OSCP_USR_REG_MZB,mzb);
+        
+        write_float_register(OSCP_USR_REG_MXX,mxx);
+        write_float_register(OSCP_USR_REG_MYX,myx);
+        write_float_register(OSCP_USR_REG_MZX,mzx);
+        write_float_register(OSCP_USR_REG_MXY,mxy);
+        write_float_register(OSCP_USR_REG_MYY,myy);
+        write_float_register(OSCP_USR_REG_MZY,mzy);
+        write_float_register(OSCP_USR_REG_MXZ,mxz);
+        write_float_register(OSCP_USR_REG_MYZ,myz);
+        write_float_register(OSCP_USR_REG_MZZ,mzz);
+
+        // Save configuration to IMU flash
+
+        uint8_t cmd[256];
+        size_t cmd_len = 0;
+
+        oscp_cmd_save(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+
+        const ssize_t written = write(fd_, cmd, cmd_len);
+
+        if (written < 0) {
+            throw std::runtime_error("Failed to write save command to IMU.");
+        }
+
+        if (static_cast<size_t>(written) != cmd_len) {
+            throw std::runtime_error("Incomplete save command written to IMU.");
+        }
+
+        tcdrain(fd_);
+
+        // Success
+
+        response->success = true;
+        response->message = "Magnetometer configuration applied and saved successfully.";
+
+        RCLCPP_INFO(this->get_logger(),"Magnetometer configuration applied successfully.");
     }
+    catch (const YAML::Exception& e) {
+        response->success = false;
+        response->message = std::string("Invalid YAML configuration: ") + e.what();
 
-    auto sample_count = mag_x_copy.size();
-    RCLCPP_INFO(this->get_logger(),"Samples collected: %zu", sample_count);
-
-    // Run final calibration solve on local copies
-    auto calibration = mag_calibrator_.solve(mag_x_copy, mag_y_copy, mag_z_copy);
-
-    // Write to registers
-    write_float_register(OSCP_USR_REG_MXB, calibration.offset_x);
-    write_float_register(OSCP_USR_REG_MYB, calibration.offset_y);
-    write_float_register(OSCP_USR_REG_MZB, calibration.offset_z);
-
-    write_float_register(OSCP_USR_REG_MXX, calibration.soft_iron[0][0]);
-    write_float_register(OSCP_USR_REG_MYX, calibration.soft_iron[0][1]);
-    write_float_register(OSCP_USR_REG_MZX, calibration.soft_iron[0][2]);
-
-    write_float_register(OSCP_USR_REG_MXY, calibration.soft_iron[1][0]);
-    write_float_register(OSCP_USR_REG_MYY, calibration.soft_iron[1][1]);
-    write_float_register(OSCP_USR_REG_MZY, calibration.soft_iron[1][2]);
-
-    write_float_register(OSCP_USR_REG_MXZ, calibration.soft_iron[2][0]);
-    write_float_register(OSCP_USR_REG_MYZ, calibration.soft_iron[2][1]);
-    write_float_register(OSCP_USR_REG_MZZ, calibration.soft_iron[2][2]);
-
-    // Save to flash if required
-    uint8_t cmd[256];
-    size_t cmd_len = 0;
-
-    oscp_cmd_save(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
-    write(fd_, cmd, cmd_len);
-    tcdrain(fd_);
-
-    //Copy calibration result into ROS action result
-    action_result->success = true;
-    action_result->hard_iron_x = calibration.offset_x;
-    action_result->hard_iron_y = calibration.offset_y;
-    action_result->hard_iron_z = calibration.offset_z;
-    action_result->fit_error = calibration.fit_error;
-    goal_handle->succeed(action_result);
-
-    RCLCPP_INFO(this->get_logger(), "Magnetometer calibration finished");
-}
-
-rclcpp_action::GoalResponse OSCPIMUNode::handle_mag_goal(const rclcpp_action::GoalUUID &, std::shared_ptr<const MagnetometerCalibration::Goal> goal) {
-    (void)goal;
-
-    if (mag_calibrating_.load()) {
-        RCLCPP_WARN(get_logger(), "Magnetometer calibration already running");
-        return rclcpp_action::GoalResponse::REJECT;
+        RCLCPP_ERROR( this->get_logger(),"%s", response->message.c_str());
     }
+    catch (const std::exception& e) {
+        response->success = false;
+        response->message = std::string("Failed to apply configuration: ") + e.what();
 
-    if (mag_calibration_thread_.joinable() && !mag_calibrating_.load()) {
-        mag_calibration_thread_.join();
+        RCLCPP_ERROR(this->get_logger(),"%s",response->message.c_str());
     }
-
-    mag_calibrator_.target_gap = 1.0f;
-    RCLCPP_INFO(get_logger(), "Starting mag calibration");
-    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-}
-
-rclcpp_action::CancelResponse OSCPIMUNode::handle_mag_cancel(const std::shared_ptr<GoalHandleMagCal>) {
-    return rclcpp_action::CancelResponse::ACCEPT;
 }
 
 /* Main Entry Point */

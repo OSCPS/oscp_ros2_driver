@@ -13,14 +13,16 @@ find_package(oscp_msgs REQUIRED)
 find_package(oscp_libraries REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(action_msgs REQUIRED)
-find_package(motion_cal_wrapper REQUIRED)
+find_package(magcal_wrapper REQUIRED)
 find_package(rosidl_default_runtime REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # Services
 rosidl_generate_interfaces(${PROJECT_NAME}
     "srv/ZeroOrientation.srv"
     "srv/StationaryCalibrate.srv"
     "srv/GetIMUConfig.srv"
+    "srv/ApplyMagConfig.srv"
       
   DEPENDENCIES
     builtin_interfaces
@@ -32,12 +34,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Node
 add_executable(oscp_imu_node 
 src/oscp_imu_node.cpp
-src/mag_calibration_helper.cpp
 )
 
 add_executable(counter_tracker 
 src/counter_tracker.cpp
-src/mag_calibration_helper.cpp
 )
 
 
@@ -47,6 +47,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 
 target_link_libraries(oscp_imu_node
   "${cpp_typesupport_target}"
+  yaml-cpp
 )
 
 ament_export_dependencies(rosidl_default_runtime)
@@ -70,7 +71,7 @@ ament_target_dependencies(oscp_imu_node
   oscp_msgs
   rclcpp_action
   tf2
-  motion_cal_wrapper
+  magcal_wrapper
 )
 
 ament_target_dependencies(counter_tracker
@@ -80,7 +81,7 @@ ament_target_dependencies(counter_tracker
   oscp_msgs
   rclcpp_action
   tf2
-  motion_cal_wrapper
+  magcal_wrapper
 )
 
 target_link_libraries(oscp_imu_node

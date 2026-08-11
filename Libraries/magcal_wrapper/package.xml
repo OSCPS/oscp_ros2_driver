@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>magcal_wrapper</name>
+  <version>0.0.0</version>
+  <description>ROS 2 wrapper for magnetometer calibration</description>
+
+  <maintainer email="rayan@oscp.com">you</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>oscp_msgs</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

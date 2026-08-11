@@ -1,0 +1,11 @@
+bool start
+---
+bool success
+float64 hard_iron_x
+float64 hard_iron_y
+float64 hard_iron_z
+float64[9] soft_iron
+float64 fit_error
+---
+float32 progress
+string status
