@@ -268,7 +268,7 @@ OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
     size_t cmd_len = 0;
 
     send_command(oscp_cmd_reset(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport)), cmd, cmd_len);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
     // Configure the IMU with the parameters set in the launch file
     publish_enable_ = configure_imu();
