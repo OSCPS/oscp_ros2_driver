@@ -218,8 +218,8 @@ OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
     // Service Initiliazations
     stationary_calibration_service_ = create_service<oscp_imu_ros2::srv::StationaryCalibrate>("oscp/stationary_calibrate",std::bind(&OSCPIMUNode::stationary_calibrate_callback,this,std::placeholders::_1,std::placeholders::_2));
     zero_orientation_service_ = create_service<oscp_imu_ros2::srv::ZeroOrientation>("oscp/zero_orientation",std::bind(&OSCPIMUNode::zero_orientation_callback,this,std::placeholders::_1,std::placeholders::_2));
-    config_service_ = this->create_service<oscp_imu_ros2::srv::GetIMUConfig>("/oscp/get_config",std::bind(&OSCPIMUNode::get_config_callback,this,std::placeholders::_1,std::placeholders::_2));
-    apply_mag_config_service_ = this->create_service<oscp_imu_ros2::srv::ApplyMagConfig>("~/oscp/apply_mag_config",std::bind(&OSCPIMUNode::apply_mag_config_callback,this,std::placeholders::_1,std::placeholders::_2));
+    config_service_ = this->create_service<oscp_imu_ros2::srv::GetIMUConfig>("oscp/get_config",std::bind(&OSCPIMUNode::get_config_callback,this,std::placeholders::_1,std::placeholders::_2));
+    apply_mag_config_service_ = this->create_service<oscp_imu_ros2::srv::ApplyMagConfig>("oscp/apply_mag_config",std::bind(&OSCPIMUNode::apply_mag_config_callback,this,std::placeholders::_1,std::placeholders::_2));
     
     // Internal Functions
     if (config_.transport == oscp_imu::Transport::CANFD) {
@@ -1166,16 +1166,16 @@ void OSCPIMUNode::get_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::
 
     std::string config_text =
         std::string("Transport: ") + oscp_imu::toString(config_.transport) + "\n" +
-        "Mode: " + std::to_string(operatingModeToStartup(config_.operating_mode)) + "\n" +
-        "Gyro: " + std::to_string(gyroRangeToStartup(config_.gyro_range)) + "\n" +
-        "Accel: " + std::to_string(accelRangeToStartup(config_.accel_range)) + "\n" +
-        "Incl: " + std::to_string(inclRangeToStartup(config_.incl_range)) + "\n" +
-        "Gyro Filter: " + std::to_string(filterModeToStartup(config_.gyro_filter_mode)) + "\n" +
-        "Gyro LPF: " + std::to_string(filterCutoffToStartup(config_.gyro_lpf)) + "\n" +
-        "Gyro HPF: " + std::to_string(filterCutoffToStartup(config_.gyro_hpf)) + "\n" +
-        "Accel Filter: " + std::to_string(filterModeToStartup(config_.accel_filter_mode)) + "\n" +
-        "Accel LPF: " + std::to_string(filterCutoffToStartup(config_.accel_lpf)) + "\n" +
-        "Accel HPF: " + std::to_string(filterCutoffToStartup(config_.accel_hpf)) + "\n";
+        "Mode: " + oscp_imu::startupToOperatingMode(operatingModeToStartup(config_.operating_mode)) + "\n" +
+        "Gyro: " + oscp_imu::startupToGyroRange(gyroRangeToStartup(config_.gyro_range)) + "\n" +
+        "Accel: " + oscp_imu::startupToAccelRange(accelRangeToStartup(config_.accel_range)) + "\n" +
+        "Incl: " + oscp_imu::startupToInclRange(inclRangeToStartup(config_.incl_range)) + "\n" +
+        "Gyro Filter: " + oscp_imu::startupToFilterMode(filterModeToStartup(config_.gyro_filter_mode)) + "\n" +
+        "Gyro LPF: " + oscp_imu::startupToFilterCutoff(filterCutoffToStartup(config_.gyro_lpf)) + "\n" +
+        "Gyro HPF: " + oscp_imu::startupToFilterCutoff(filterCutoffToStartup(config_.gyro_hpf)) + "\n" +
+        "Accel Filter: " + oscp_imu::startupToFilterMode(filterModeToStartup(config_.accel_filter_mode)) + "\n" +
+        "Accel LPF: " + oscp_imu::startupToFilterCutoff(filterCutoffToStartup(config_.accel_lpf)) + "\n" +
+        "Accel HPF: " + oscp_imu::startupToFilterCutoff(filterCutoffToStartup(config_.accel_hpf)) + "\n";
     response->config_summary = config_text;
 }
 
