@@ -6,7 +6,7 @@ oscp_imu_node:
     frame_id: "imu_link"
     pub_accel_in_g: false
 
-    operating_mode: "MEDIUM"
+    operating_mode: "LOW"
 
     publish_standard_ros: True            # Default: True
     publish_oscp_raw: True                # Default: True
