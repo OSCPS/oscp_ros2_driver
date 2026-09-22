@@ -263,11 +263,12 @@ OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
     // Let the unit power up (600ms) 
     std::this_thread::sleep_for(std::chrono::milliseconds(600));
 
-    // Reset the unit 
+    // Reset the unit
     uint8_t cmd[256];
     size_t cmd_len = 0;
-
-    send_command(oscp_cmd_reset(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport)), cmd, cmd_len);
+ 
+    oscp_err_t cmd_result = oscp_cmd_reset(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
     // Configure the IMU with the parameters set in the launch file
@@ -482,80 +483,117 @@ bool OSCPIMUNode::send_command(oscp_err_t result, uint8_t *cmd, size_t cmd_len) 
 bool OSCPIMUNode::configure_imu() {
     uint8_t cmd[256];
     size_t cmd_len = 0;
-
+    oscp_err_t cmd_result = OSCP_OK;
+ 
     // Enter configuration mode
-    send_command(oscp_cmd_config(cmd,sizeof(cmd),&cmd_len,to_oscp(config_.transport)),cmd, cmd_len);
-
-    send_command(oscp_cmd_dri(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.incl_range), to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_RAW, to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_EULER, to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_QUATERNION, to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_ROT_MATRIX, to_oscp(config_.transport)),cmd, cmd_len);
-
-    send_command(oscp_cmd_om(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.operating_mode), to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_drg(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.gyro_range), to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_dra(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.accel_range), to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_FCO, to_oscp(config_.ahrs_convention), to_oscp(config_.transport)),cmd, cmd_len);
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_FHS, to_oscp(config_.ahrs_heading), to_oscp(config_.transport)),cmd, cmd_len);
-
+    cmd_result = oscp_cmd_config(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_dri(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.incl_range), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_RAW, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_EULER, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_QUATERNION, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_disable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_ROT_MATRIX, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_om(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.operating_mode), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_drg(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.gyro_range), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_dra(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.accel_range), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_FCO, to_oscp(config_.ahrs_convention), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_FHS, to_oscp(config_.ahrs_heading), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
     // Gyroscope filter configuration
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,OSCP_USR_REG_GFI,to_oscp(config_.gyro_filter_mode),to_oscp(config_.transport)),cmd,cmd_len);
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,OSCP_USR_REG_GLP,to_oscp(config_.gyro_lpf),to_oscp(config_.transport)),cmd,cmd_len);
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,OSCP_USR_REG_GHP,to_oscp(config_.gyro_hpf),to_oscp(config_.transport)),cmd,cmd_len);
-
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_GFI, to_oscp(config_.gyro_filter_mode), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_GLP, to_oscp(config_.gyro_lpf), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_GHP, to_oscp(config_.gyro_hpf), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
     // Accelerometer filter configuration
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,OSCP_USR_REG_AFI,to_oscp(config_.accel_filter_mode),to_oscp(config_.transport)),cmd,cmd_len);
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,OSCP_USR_REG_ALP,to_oscp(config_.accel_lpf),to_oscp(config_.transport)),cmd,cmd_len);
-    send_command(oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,OSCP_USR_REG_AHP,to_oscp(config_.accel_hpf),to_oscp(config_.transport)),cmd,cmd_len);
-
-    if(config_.publish_oscp_raw || config_.publish_standard_ros) { 
-        send_command(oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_RAW, to_oscp(config_.transport)),cmd, cmd_len);
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_AFI, to_oscp(config_.accel_filter_mode), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_ALP, to_oscp(config_.accel_lpf), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_AHP, to_oscp(config_.accel_hpf), to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    if (config_.publish_oscp_raw || config_.publish_standard_ros) {
+        cmd_result = oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_RAW, to_oscp(config_.transport));
+        send_command(cmd_result, cmd, cmd_len);
         RCLCPP_INFO(get_logger(), "Raw Frame Enabled");
     }
-
-    if(config_.publish_oscp_euler) {
-        send_command(oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_EULER, to_oscp(config_.transport)),cmd, cmd_len);
+ 
+    if (config_.publish_oscp_euler) {
+        cmd_result = oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_EULER, to_oscp(config_.transport));
+        send_command(cmd_result, cmd, cmd_len);
         RCLCPP_INFO(get_logger(), "Euler Frame Enabled");
     }
-
-    if(config_.publish_oscp_quat || config_.publish_standard_ros) {
-        send_command(oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_QUATERNION, to_oscp(config_.transport)),cmd, cmd_len);
+ 
+    if (config_.publish_oscp_quat || config_.publish_standard_ros) {
+        cmd_result = oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_QUATERNION, to_oscp(config_.transport));
+        send_command(cmd_result, cmd, cmd_len);
         RCLCPP_INFO(get_logger(), "Quaternion Frame Enabled");
     }
-
-    if(config_.publish_oscp_rot) {
-        send_command(oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_ROT_MATRIX, to_oscp(config_.transport)),cmd, cmd_len);
+ 
+    if (config_.publish_oscp_rot) {
+        cmd_result = oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_ROT_MATRIX, to_oscp(config_.transport));
+        send_command(cmd_result, cmd, cmd_len);
         RCLCPP_INFO(get_logger(), "Rotation Matrix Frame Enabled");
     }
-
-    if(config_.publish_oscp_gnss) {
-        send_command(oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_GNSS, to_oscp(config_.transport)),cmd, cmd_len);
+ 
+    if (config_.publish_oscp_gnss) {
+        cmd_result = oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_GNSS, to_oscp(config_.transport));
+        send_command(cmd_result, cmd, cmd_len);
         RCLCPP_INFO(get_logger(), "GNSS Frame Enabled");
     }
-
+ 
     RCLCPP_INFO(get_logger(), "IMU configuration sent");
-
+ 
     startup_received_.store(false);
-    
-    // Request an SUF for identification 
-    send_command(oscp_cmd_suf(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport)), cmd, cmd_len);
+ 
+    // Request an SUF for identification
+    cmd_result = oscp_cmd_suf(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
     read_transport();
-
+ 
     // Exit config mode
-    send_command(oscp_cmd_exit(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport)),cmd, cmd_len);
-
-    // Look for Startup 
+    cmd_result = oscp_cmd_exit(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+ 
+    // Look for Startup
     if (!startup_received_.load()) {
-        RCLCPP_ERROR(get_logger(),"No startup frame received");
+        RCLCPP_ERROR(get_logger(), "No startup frame received");
         return false;
     }
-    
+ 
     if (!verify_startup_config()) {
-        RCLCPP_ERROR(get_logger(),"IMU configuration failed");
+        RCLCPP_ERROR(get_logger(), "IMU configuration failed");
         return false;
     }
-
-    RCLCPP_INFO(get_logger(),"IMU configuration suceeded");
+ 
+    RCLCPP_INFO(get_logger(), "IMU configuration suceeded");
     return true;
 }
 
