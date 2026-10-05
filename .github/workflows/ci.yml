@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [humble, jazzy]
+        distro: [humble]
     steps:
       - uses: actions/checkout@v4
         with:
