@@ -2,6 +2,13 @@
 
 Lightweight, configurable ROS 2 driver for OSCP-family IMUs. The node decodes the device's operating frames and publishes both native OSCP frame messages and standard ROS `sensor_msgs` types.
 
+## Supported ROS 2 distributions
+
+| ROS 2 distro | Branch   | Ubuntu | CI |
+|--------------|----------|--------|----|
+| Jazzy        | `jazzy`  | 24.04  | ![CI](https://github.com/OSCPS/oscp_ros2_driver/actions/workflows/ci.yml/badge.svg?branch=jazzy) |
+| Humble       | `humble` | 22.04  | ![CI](https://github.com/OSCPS/oscp_ros2_driver/actions/workflows/ci.yml/badge.svg?branch=humble) |
+
 ## Overview
 
 - Supported outputs: raw IMU frames, quaternion, Euler angles, rotation matrix, GNSS (if available), and standard ROS `sensor_msgs` (`Imu`, `MagneticField`, `Temperature`).
@@ -20,7 +27,7 @@ Clone into your ROS 2 workspace and build:
 
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/OSCPS/oscp_ros2_driver
+git clone -b jazzy https://github.com/OSCPS/oscp_ros2_driver # or -b humble
 cd ..
 rosdep update
 rosdep install --from-paths src -y --ignore-src --rosdistro "$ROS_DISTRO"

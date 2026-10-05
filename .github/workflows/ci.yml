@@ -1,0 +1,25 @@
+name: ROS 2 CI
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ros:${{ matrix.distro }}-ros-base
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/oscp_ros2_driver
+      - name: Build and test
+        shell: bash
+        run: |
+          apt-get update
+          rosdep update
+          rosdep install --from-paths src -y --ignore-src --rosdistro ${{ matrix.distro }}
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          colcon build --event-handlers console_direct+
+          colcon test && colcon test-result --verbose
