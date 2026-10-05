@@ -16,9 +16,6 @@
   <depend>tf2</depend>
   <depend>yaml-cpp</depend>
 
-  <!-- Threading -->
-  <depend>libstdcxx</depend>
-
   <!-- Custom libraries -->
   <depend>oscp_msgs</depend>
   <depend>oscp_libraries</depend>
