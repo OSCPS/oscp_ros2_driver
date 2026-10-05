@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>oscp_imu_ros2</name>
-  <version>0.0.1</version>
+  <version>1.0.0</version>
   <description>ROS2 wrapper for OSCP IMU driver</description>
 
   <maintainer email="rayan@oscp.com">you</maintainer>
@@ -15,9 +15,6 @@
   <depend>std_msgs</depend>
   <depend>tf2</depend>
   <depend>yaml-cpp</depend>
-
-  <!-- Threading -->
-  <depend>libstdcxx</depend>
 
   <!-- Custom libraries -->
   <depend>oscp_msgs</depend>
