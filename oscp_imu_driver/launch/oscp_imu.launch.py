@@ -17,13 +17,13 @@ def generate_launch_description():
         ),
 
         Node(
-            package='oscp_imu_ros2',
+            package='oscp_imu_driver',
             executable='oscp_imu_node',
             name='oscp_imu_node',
 
             parameters=[
                 PathJoinSubstitution([
-                    FindPackageShare('oscp_imu_ros2'),
+                    FindPackageShare('oscp_imu_driver'),
                     'config',
                     config_file
                 ])

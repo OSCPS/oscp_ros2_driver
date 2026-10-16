@@ -2,7 +2,7 @@
 #define OSCP_IMU_ROS2_OSCP_IMU_ROSPARAM_HPP
 
 /* Includes */
-#include "oscp_imu_ros2/oscp_imu_config.hpp"
+#include "oscp_imu_driver/oscp_imu_config.hpp"
 #include "oscp_imu.h"
 
 /* Translation functions */
