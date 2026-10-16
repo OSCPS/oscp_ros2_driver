@@ -20,28 +20,28 @@
 #include <sensor_msgs/msg/temperature.hpp>
 
 // OSCP Messages includes
-#include <oscp_msgs/msg/oscp_raw.hpp>
-#include <oscp_msgs/msg/oscp_rot.hpp>
-#include <oscp_msgs/msg/oscp_quat.hpp>
-#include <oscp_msgs/msg/oscp_euler.hpp>
-#include <oscp_msgs/msg/oscp_gnss.hpp>
+#include <oscp_imu_msgs/msg/oscp_raw.hpp>
+#include <oscp_imu_msgs/msg/oscp_rot.hpp>
+#include <oscp_imu_msgs/msg/oscp_quat.hpp>
+#include <oscp_imu_msgs/msg/oscp_euler.hpp>
+#include <oscp_imu_msgs/msg/oscp_gnss.hpp>
 
 // OSCP Specific Includes
-#include "oscp_imu_ros2/oscp_imu_config.hpp"
-#include "oscp_imu_ros2/oscp_imu_startup_info.hpp"
+#include "oscp_imu_driver/oscp_imu_config.hpp"
+#include "oscp_imu_driver/oscp_imu_startup_info.hpp"
 
 // Actions and services includes
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include "magcal_wrapper/action/magnetometer_calibration.hpp"
 
-#include <oscp_imu_ros2/srv/stationary_calibrate.hpp>
-#include <oscp_imu_ros2/srv/zero_orientation.hpp>
-#include "oscp_imu_ros2/srv/get_imu_config.hpp"
-#include "oscp_imu_ros2/srv/apply_mag_config.hpp"
+#include <oscp_imu_driver/srv/stationary_calibrate.hpp>
+#include <oscp_imu_driver/srv/zero_orientation.hpp>
+#include "oscp_imu_driver/srv/get_imu_config.hpp"
+#include "oscp_imu_driver/srv/apply_mag_config.hpp"
 
 extern "C" {
-#include "oscp_imu.h"
+#include "oscp_imu_libraries/oscp_imu.h"
 }
 
 /* OSCP ROS2 Node */
@@ -110,11 +110,11 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<sensor_msgs::msg::MagneticField>::SharedPtr mag_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr temp_pub_;
-    rclcpp::Publisher<oscp_msgs::msg::OscpRaw>::SharedPtr raw_frame_pub_;
-    rclcpp::Publisher<oscp_msgs::msg::OscpQuat>::SharedPtr quat_frame_pub_;
-    rclcpp::Publisher<oscp_msgs::msg::OscpEuler>::SharedPtr euler_frame_pub_;
-    rclcpp::Publisher<oscp_msgs::msg::OscpRot>::SharedPtr rot_frame_pub_;
-    rclcpp::Publisher<oscp_msgs::msg::OscpGnss>::SharedPtr gnss_frame_pub_;
+    rclcpp::Publisher<oscp_imu_msgs::msg::OscpRaw>::SharedPtr raw_frame_pub_;
+    rclcpp::Publisher<oscp_imu_msgs::msg::OscpQuat>::SharedPtr quat_frame_pub_;
+    rclcpp::Publisher<oscp_imu_msgs::msg::OscpEuler>::SharedPtr euler_frame_pub_;
+    rclcpp::Publisher<oscp_imu_msgs::msg::OscpRot>::SharedPtr rot_frame_pub_;
+    rclcpp::Publisher<oscp_imu_msgs::msg::OscpGnss>::SharedPtr gnss_frame_pub_;
 
     std::mutex frame_mutex_;
 
@@ -171,21 +171,21 @@ private:
     void publish_temperature();
 
     // Service Functions
-    void get_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::GetIMUConfig::Request> request,std::shared_ptr<oscp_imu_ros2::srv::GetIMUConfig::Response> response);
+    void get_config_callback(const std::shared_ptr<oscp_imu_driver::srv::GetIMUConfig::Request> request,std::shared_ptr<oscp_imu_driver::srv::GetIMUConfig::Response> response);
     
     bool stationary_calibrate(double duration);
     void stationary_calibration_worker(double duration);
-    void stationary_calibrate_callback(const std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Request> request, std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Response> response);
+    void stationary_calibrate_callback(const std::shared_ptr<oscp_imu_driver::srv::StationaryCalibrate::Request> request, std::shared_ptr<oscp_imu_driver::srv::StationaryCalibrate::Response> response);
 
     void zero_orientation(float current[3][3], float corrected[3][3]);
-    void zero_orientation_callback(const std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Request> request, std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Response> response);
+    void zero_orientation_callback(const std::shared_ptr<oscp_imu_driver::srv::ZeroOrientation::Request> request, std::shared_ptr<oscp_imu_driver::srv::ZeroOrientation::Response> response);
 
-    void apply_mag_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Request> request,std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Response> response);
+    void apply_mag_config_callback(const std::shared_ptr<oscp_imu_driver::srv::ApplyMagConfig::Request> request,std::shared_ptr<oscp_imu_driver::srv::ApplyMagConfig::Response> response);
 
-    rclcpp::Service<oscp_imu_ros2::srv::StationaryCalibrate>::SharedPtr stationary_calibration_service_;
-    rclcpp::Service<oscp_imu_ros2::srv::ZeroOrientation>::SharedPtr zero_orientation_service_;
-    rclcpp::Service<oscp_imu_ros2::srv::GetIMUConfig>::SharedPtr config_service_;
-    rclcpp::Service<oscp_imu_ros2::srv::ApplyMagConfig>::SharedPtr apply_mag_config_service_;
+    rclcpp::Service<oscp_imu_driver::srv::StationaryCalibrate>::SharedPtr stationary_calibration_service_;
+    rclcpp::Service<oscp_imu_driver::srv::ZeroOrientation>::SharedPtr zero_orientation_service_;
+    rclcpp::Service<oscp_imu_driver::srv::GetIMUConfig>::SharedPtr config_service_;
+    rclcpp::Service<oscp_imu_driver::srv::ApplyMagConfig>::SharedPtr apply_mag_config_service_;
 
 
 };

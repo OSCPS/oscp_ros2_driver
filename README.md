@@ -1,4 +1,4 @@
-# OSCP IMU ROS2 Driver (oscp_imu_ros2)
+# OSCP IMU ROS2 Driver (oscp_imu_driver)
 
 Lightweight, configurable ROS 2 driver for OSCP-family IMUs. The node decodes the device's operating frames and publishes both native OSCP frame messages and standard ROS `sensor_msgs` types.
 
@@ -31,7 +31,7 @@ git clone -b jazzy https://github.com/OSCPS/oscp_ros2_driver # or -b humble
 cd ..
 rosdep update
 rosdep install --from-paths src -y --ignore-src --rosdistro "$ROS_DISTRO"
-colcon build --packages-select oscp_imu_ros2
+colcon build --packages-select oscp_imu_driver
 source install/setup.bash
 ```
 
@@ -40,7 +40,7 @@ source install/setup.bash
 Launch the IMU node using the provided launch file and config YAML:
 
 ```bash
-ros2 launch oscp_imu_ros2 oscp_imu.launch.py config_file:=default.yaml
+ros2 launch oscp_imu_driver oscp_imu.launch.py config_file:=default.yaml
 ```
 
 You can override node parameters via the launch file or with `--ros-args -p`.
@@ -62,17 +62,17 @@ The node reads parameters from a YAML file passed as `config_file` to the launch
 - `watchdog_timeout_ms` (double): timeout for frame watchdog
 - `parser_stats_log_interval_s` (double): interval to log parser stats (0 disables)
 
-Refer to `src/oscp_ros2_driver/oscp_imu_ros2/config/default.yaml` for the full default set.
+Refer to `src/oscp_ros2_driver/oscp_imu_driver/config/default.yaml` for the full default set.
 
 ## Topics
 
-Native OSCP frame topics (types are in `oscp_msgs`):
+Native OSCP frame topics (types are in `oscp_imu_msgs`):
 
-- `/oscp/raw` (`oscp_msgs::msg::OscpRaw`)
-- `/oscp/quat` (`oscp_msgs::msg::OscpQuat`)
-- `/oscp/euler` (`oscp_msgs::msg::OscpEuler`)
-- `/oscp/rot` (`oscp_msgs::msg::OscpRot`)
-- `/oscp/gnss` (`oscp_msgs::msg::OscpGnss`)
+- `/oscp/raw` (`oscp_imu_msgs::msg::OscpRaw`)
+- `/oscp/quat` (`oscp_imu_msgs::msg::OscpQuat`)
+- `/oscp/euler` (`oscp_imu_msgs::msg::OscpEuler`)
+- `/oscp/rot` (`oscp_imu_msgs::msg::OscpRot`)
+- `/oscp/gnss` (`oscp_imu_msgs::msg::OscpGnss`)
 
 Standard ROS topics:
 
@@ -88,7 +88,7 @@ For high-rate IMU telemetry, use `SensorDataQoS` in code for publishers/subscrib
 auto qos = rclcpp::SensorDataQoS();
 qos.keep_last(1000);
 
-publisher = this->create_publisher<oscp_msgs::msg::OscpRaw>("/oscp/raw", qos);
+publisher = this->create_publisher<oscp_imu_msgs::msg::OscpRaw>("/oscp/raw", qos);
 ```
 
 Notes:
@@ -111,5 +111,5 @@ ros2 param dump /oscp_imu_node
 - Call the `get_config` service and pretty-print the result:
 
 ```bash
-ros2 service call /oscp/get_config oscp_imu_ros2/srv/GetIMUConfig "{}" | sed '\\'s/\\n/\n/g'```
+ros2 service call /oscp/get_config oscp_imu_driver/srv/GetIMUConfig "{}" | sed '\\'s/\\n/\n/g'```
 
