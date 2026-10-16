@@ -5,7 +5,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "oscp_imu_ros2/oscp_imu_config.hpp"
+#include "oscp_imu_driver/oscp_imu_config.hpp"
 
 /* Parameter Functions */
 namespace oscp_imu {

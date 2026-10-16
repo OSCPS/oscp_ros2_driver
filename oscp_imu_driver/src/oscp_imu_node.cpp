@@ -14,9 +14,9 @@
 #include <stdexcept>
 
 // OSCP Specific Includes
-#include "oscp_imu_ros2/oscp_imu_param_translator.hpp"
-#include "oscp_imu_ros2/oscp_imu_rosparam.hpp"
-#include "oscp_imu_ros2/oscp_imu_node.hpp"
+#include "oscp_imu_driver/oscp_imu_param_translator.hpp"
+#include "oscp_imu_driver/oscp_imu_rosparam.hpp"
+#include "oscp_imu_driver/oscp_imu_node.hpp"
 
 /* Constuctor */
 OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
@@ -194,32 +194,32 @@ OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
 
     // OSCP frame publishers
     if (config_.publish_oscp_raw) {
-        raw_frame_pub_ = create_publisher<oscp_msgs::msg::OscpRaw>("oscp/raw", high_rate_qos);
+        raw_frame_pub_ = create_publisher<oscp_imu_msgs::msg::OscpRaw>("oscp/raw", high_rate_qos);
     }
 
     if (config_.publish_oscp_quat) {
-        quat_frame_pub_ = create_publisher<oscp_msgs::msg::OscpQuat>("oscp/quat", high_rate_qos);
+        quat_frame_pub_ = create_publisher<oscp_imu_msgs::msg::OscpQuat>("oscp/quat", high_rate_qos);
     }
 
     if (config_.publish_oscp_euler) {
-        euler_frame_pub_ = create_publisher<oscp_msgs::msg::OscpEuler>("oscp/euler", high_rate_qos);
+        euler_frame_pub_ = create_publisher<oscp_imu_msgs::msg::OscpEuler>("oscp/euler", high_rate_qos);
     }
 
     if (config_.publish_oscp_rot) {
-        rot_frame_pub_ = create_publisher<oscp_msgs::msg::OscpRot>("oscp/rot", high_rate_qos);
+        rot_frame_pub_ = create_publisher<oscp_imu_msgs::msg::OscpRot>("oscp/rot", high_rate_qos);
     }
 
     if (config_.publish_oscp_gnss) {
-        gnss_frame_pub_ = create_publisher<oscp_msgs::msg::OscpGnss>("oscp/gnss", high_rate_qos);
+        gnss_frame_pub_ = create_publisher<oscp_imu_msgs::msg::OscpGnss>("oscp/gnss", high_rate_qos);
     }
 
     oscp_parser_init(&parser_, &OSCPIMUNode::on_frame_trampoline, this);
 
     // Service Initiliazations
-    stationary_calibration_service_ = create_service<oscp_imu_ros2::srv::StationaryCalibrate>("oscp/stationary_calibrate",std::bind(&OSCPIMUNode::stationary_calibrate_callback,this,std::placeholders::_1,std::placeholders::_2));
-    zero_orientation_service_ = create_service<oscp_imu_ros2::srv::ZeroOrientation>("oscp/zero_orientation",std::bind(&OSCPIMUNode::zero_orientation_callback,this,std::placeholders::_1,std::placeholders::_2));
-    config_service_ = this->create_service<oscp_imu_ros2::srv::GetIMUConfig>("oscp/get_config",std::bind(&OSCPIMUNode::get_config_callback,this,std::placeholders::_1,std::placeholders::_2));
-    apply_mag_config_service_ = this->create_service<oscp_imu_ros2::srv::ApplyMagConfig>("oscp/apply_mag_config",std::bind(&OSCPIMUNode::apply_mag_config_callback,this,std::placeholders::_1,std::placeholders::_2));
+    stationary_calibration_service_ = create_service<oscp_imu_driver::srv::StationaryCalibrate>("oscp/stationary_calibrate",std::bind(&OSCPIMUNode::stationary_calibrate_callback,this,std::placeholders::_1,std::placeholders::_2));
+    zero_orientation_service_ = create_service<oscp_imu_driver::srv::ZeroOrientation>("oscp/zero_orientation",std::bind(&OSCPIMUNode::zero_orientation_callback,this,std::placeholders::_1,std::placeholders::_2));
+    config_service_ = this->create_service<oscp_imu_driver::srv::GetIMUConfig>("oscp/get_config",std::bind(&OSCPIMUNode::get_config_callback,this,std::placeholders::_1,std::placeholders::_2));
+    apply_mag_config_service_ = this->create_service<oscp_imu_driver::srv::ApplyMagConfig>("oscp/apply_mag_config",std::bind(&OSCPIMUNode::apply_mag_config_callback,this,std::placeholders::_1,std::placeholders::_2));
     
     // Internal Functions
     if (config_.transport == oscp_imu::Transport::CANFD) {
@@ -881,7 +881,7 @@ void OSCPIMUNode::publish_raw_frame() {
         raw = latest_raw_;
     }
 
-    auto raw_msg = oscp_msgs::msg::OscpRaw();
+    auto raw_msg = oscp_imu_msgs::msg::OscpRaw();
 
     raw_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(raw.timestamp_ms) * 1000000ULL);
     raw_msg.header.frame_id = config_.frame_id;
@@ -919,7 +919,7 @@ void OSCPIMUNode::publish_quat_frame() {
         q_local = latest_quat_;
     }
 
-    auto quat_msg = oscp_msgs::msg::OscpQuat();
+    auto quat_msg = oscp_imu_msgs::msg::OscpQuat();
 
     quat_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(q_local.timestamp_ms) * 1000000ULL);
     quat_msg.header.frame_id = config_.frame_id;
@@ -963,7 +963,7 @@ void OSCPIMUNode::publish_euler_frame() {
         e_local = latest_euler_;
     }
 
-    auto euler_msg = oscp_msgs::msg::OscpEuler();
+    auto euler_msg = oscp_imu_msgs::msg::OscpEuler();
 
     euler_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(e_local.timestamp_ms) * 1000000ULL);
     euler_msg.header.frame_id = config_.frame_id;
@@ -995,7 +995,7 @@ void OSCPIMUNode::publish_rot_frame() {
         rm_local = latest_rotation_matrix_;
     }
 
-    auto rot_msg = oscp_msgs::msg::OscpRot();
+    auto rot_msg = oscp_imu_msgs::msg::OscpRot();
 
     rot_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(rm_local.timestamp_ms) * 1000000ULL);
     rot_msg.header.frame_id = config_.frame_id;
@@ -1046,7 +1046,7 @@ void OSCPIMUNode::publish_gnss_frame()  {
         g_local = latest_gnss_;
     }
 
-    auto gnss_msg = oscp_msgs::msg::OscpGnss();
+    auto gnss_msg = oscp_imu_msgs::msg::OscpGnss();
 
     gnss_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(g_local.timestamp_ms) * 1000000ULL);
 
@@ -1200,7 +1200,7 @@ void OSCPIMUNode::publish_temperature() {
 }
 
 /* Service Functions */
-void OSCPIMUNode::get_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::GetIMUConfig::Request> request, std::shared_ptr<oscp_imu_ros2::srv::GetIMUConfig::Response> response) {
+void OSCPIMUNode::get_config_callback(const std::shared_ptr<oscp_imu_driver::srv::GetIMUConfig::Request> request, std::shared_ptr<oscp_imu_driver::srv::GetIMUConfig::Response> response) {
 
     std::string config_text =
         std::string("Transport: ") + oscp_imu::toString(config_.transport) + "\n" +
@@ -1325,8 +1325,8 @@ void OSCPIMUNode::stationary_calibration_worker(double duration) {
     stationary_calibration_active_.store(false);
 }
 
-void OSCPIMUNode::stationary_calibrate_callback(const std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Request> request,
-    std::shared_ptr<oscp_imu_ros2::srv::StationaryCalibrate::Response> response) {
+void OSCPIMUNode::stationary_calibrate_callback(const std::shared_ptr<oscp_imu_driver::srv::StationaryCalibrate::Request> request,
+    std::shared_ptr<oscp_imu_driver::srv::StationaryCalibrate::Response> response) {
     if (stationary_calibration_thread_.joinable()) {
         if (stationary_calibration_active_.load()) {
             response->success = false;
@@ -1365,7 +1365,7 @@ void OSCPIMUNode::zero_orientation(float current[3][3], float corrected[3][3]) {
     }
 }
 
-void OSCPIMUNode::zero_orientation_callback(const std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Request> request, std::shared_ptr<oscp_imu_ros2::srv::ZeroOrientation::Response> response) {
+void OSCPIMUNode::zero_orientation_callback(const std::shared_ptr<oscp_imu_driver::srv::ZeroOrientation::Request> request, std::shared_ptr<oscp_imu_driver::srv::ZeroOrientation::Response> response) {
     (void)request;
 
     bool zeroed = false;
@@ -1428,7 +1428,7 @@ void OSCPIMUNode::zero_orientation_callback(const std::shared_ptr<oscp_imu_ros2:
     }
 }
 
-void OSCPIMUNode::apply_mag_config_callback(const std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Request> request, std::shared_ptr<oscp_imu_ros2::srv::ApplyMagConfig::Response> response) {
+void OSCPIMUNode::apply_mag_config_callback(const std::shared_ptr<oscp_imu_driver::srv::ApplyMagConfig::Request> request, std::shared_ptr<oscp_imu_driver::srv::ApplyMagConfig::Response> response) {
     if (request->config_path.empty()) {
         response->success = false;
         response->message = "Config path is empty.";

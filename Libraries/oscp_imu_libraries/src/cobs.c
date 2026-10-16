@@ -5,7 +5,7 @@
  */
 
 #include <stdlib.h>
-#include "cobs.h"
+#include "oscp_imu_libraries/cobs.h"
 
 
 /*****************************************************************************

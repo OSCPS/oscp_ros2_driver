@@ -11,7 +11,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
-from oscp_msgs.msg import OscpRaw
+from oscp_imu_msgs.msg import OscpRaw
 from magcal_wrapper.action import MagnetometerCalibration
 from magcal_wrapper_py.core import MagnetometerCalibrator
 
