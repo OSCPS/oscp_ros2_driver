@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(oscp_imu_ros2)
+project(oscp_imu_driver)
 
 # Dependencies
 find_package(ament_cmake REQUIRED)
@@ -9,8 +9,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(oscp_msgs REQUIRED)
-find_package(oscp_libraries REQUIRED)
+find_package(oscp_imu_msgs REQUIRED)
+find_package(oscp_imu_libraries REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(action_msgs REQUIRED)
 find_package(magcal_wrapper REQUIRED)
@@ -55,20 +55,18 @@ ament_export_dependencies(rosidl_default_runtime)
 target_include_directories(oscp_imu_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/oscp_libraries/include
 )
 
 target_include_directories(counter_tracker PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/oscp_libraries/include
 )
 
 ament_target_dependencies(oscp_imu_node
   rclcpp
   sensor_msgs
   std_msgs
-  oscp_msgs
+  oscp_imu_msgs
   rclcpp_action
   tf2
   magcal_wrapper
@@ -78,19 +76,19 @@ ament_target_dependencies(counter_tracker
   rclcpp
   sensor_msgs
   std_msgs
-  oscp_msgs
+  oscp_imu_msgs
   rclcpp_action
   tf2
   magcal_wrapper
 )
 
 target_link_libraries(oscp_imu_node
-  oscp_libraries::oscp_libraries
+  oscp_imu_libraries::oscp_imu_libraries
   Threads::Threads
 )
 
 target_link_libraries(counter_tracker
-  oscp_libraries::oscp_libraries
+  oscp_imu_libraries::oscp_imu_libraries
   Threads::Threads
 )
 

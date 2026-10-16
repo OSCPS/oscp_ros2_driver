@@ -7,11 +7,11 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "oscp_msgs/msg/oscp_raw.hpp"
-#include "oscp_msgs/msg/oscp_quat.hpp"
-#include "oscp_msgs/msg/oscp_euler.hpp"
-#include "oscp_msgs/msg/oscp_rot.hpp"
-#include "oscp_msgs/msg/oscp_gnss.hpp"
+#include "oscp_imu_msgs/msg/oscp_raw.hpp"
+#include "oscp_imu_msgs/msg/oscp_quat.hpp"
+#include "oscp_imu_msgs/msg/oscp_euler.hpp"
+#include "oscp_imu_msgs/msg/oscp_rot.hpp"
+#include "oscp_imu_msgs/msg/oscp_gnss.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/magnetic_field.hpp"
 #include "sensor_msgs/msg/temperature.hpp"
@@ -30,13 +30,13 @@ public:
         rclcpp::QoS high_rate_qos = rclcpp::SensorDataQoS();
         high_rate_qos.keep_last(1000);
 
-        sub_ = create_subscription<oscp_msgs::msg::OscpRaw>("/oscp/raw", high_rate_qos, std::bind(&CounterMonitor::raw_callback, this, std::placeholders::_1));
+        sub_ = create_subscription<oscp_imu_msgs::msg::OscpRaw>("/oscp/raw", high_rate_qos, std::bind(&CounterMonitor::raw_callback, this, std::placeholders::_1));
         topic_counts_["/oscp/raw"] = 0;
 
-        create_topic_subscription<oscp_msgs::msg::OscpQuat>("/oscp/quat", high_rate_qos);
-        create_topic_subscription<oscp_msgs::msg::OscpEuler>("/oscp/euler", high_rate_qos);
-        create_topic_subscription<oscp_msgs::msg::OscpRot>("/oscp/rot", high_rate_qos);
-        create_topic_subscription<oscp_msgs::msg::OscpGnss>("/oscp/gnss", high_rate_qos);
+        create_topic_subscription<oscp_imu_msgs::msg::OscpQuat>("/oscp/quat", high_rate_qos);
+        create_topic_subscription<oscp_imu_msgs::msg::OscpEuler>("/oscp/euler", high_rate_qos);
+        create_topic_subscription<oscp_imu_msgs::msg::OscpRot>("/oscp/rot", high_rate_qos);
+        create_topic_subscription<oscp_imu_msgs::msg::OscpGnss>("/oscp/gnss", high_rate_qos);
         create_topic_subscription<sensor_msgs::msg::Imu>("/oscp/imu/data", high_rate_qos);
         create_topic_subscription<sensor_msgs::msg::MagneticField>("/oscp/imu/mag", high_rate_qos);
         create_topic_subscription<sensor_msgs::msg::Temperature>("/oscp/imu/temp", high_rate_qos);
@@ -75,7 +75,7 @@ public:
     }
 
 private:
-    void raw_callback(const oscp_msgs::msg::OscpRaw::SharedPtr msg) {
+    void raw_callback(const oscp_imu_msgs::msg::OscpRaw::SharedPtr msg) {
         count_topic_message("/oscp/raw");
 
         uint8_t current = msg->counter;
@@ -156,7 +156,7 @@ private:
         rclcpp::shutdown();
     }
 
-    rclcpp::Subscription<oscp_msgs::msg::OscpRaw>::SharedPtr sub_;
+    rclcpp::Subscription<oscp_imu_msgs::msg::OscpRaw>::SharedPtr sub_;
     std::vector<rclcpp::SubscriptionBase::SharedPtr> subs_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr hz_timer_;

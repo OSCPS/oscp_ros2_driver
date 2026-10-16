@@ -1,11 +1,14 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>oscp_imu_ros2</name>
-  <version>1.0.0</version>
+  <name>oscp_imu_driver</name>
+  <version>1.0.1</version>
   <description>ROS2 wrapper for OSCP IMU driver</description>
 
-  <maintainer email="rayan@oscp.com">you</maintainer>
+  <maintainer email="rayan@oscp.com">Rayan Raad</maintainer>
   <license>MIT</license>
+
+  <url type="repository">https://github.com/OSCPS/oscp_ros2_driver</url>
+  <url type="bugtracker">https://github.com/OSCPS/oscp_ros2_driver/issues</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -17,8 +20,8 @@
   <depend>yaml-cpp</depend>
 
   <!-- Custom libraries -->
-  <depend>oscp_msgs</depend>
-  <depend>oscp_libraries</depend>
+  <depend>oscp_imu_msgs</depend>
+  <depend>oscp_imu_libraries</depend>
   <depend>magcal_wrapper</depend>
 
   <!-- Services -->

@@ -1,9 +1,12 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Changelog for package oscp_msgs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package oscp_imu_msgs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2026-10-16)
+------------------
+* refactor: rename package oscp_msgs -> oscp_imu_msgs to follow REP-144
+* fix: set maintainer name in package manifest
+* Contributors: BlueMazer
 
 1.0.0 (2026-10-05)
 ------------------

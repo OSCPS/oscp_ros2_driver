@@ -1,9 +1,13 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Changelog for package oscp_imu_ros2
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package oscp_imu_driver
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2026-10-16)
+------------------
+* refactor: rename package oscp_imu_ros2 -> oscp_imu_driver to follow REP-144
+* refactor: depend on renamed oscp_imu_msgs and oscp_imu_libraries
+* fix: set maintainer name in package manifest
+* Contributors: BlueMazer
 
 1.0.0 (2026-10-05)
 ------------------

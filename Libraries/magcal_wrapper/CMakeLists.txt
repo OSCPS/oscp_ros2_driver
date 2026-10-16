@@ -3,7 +3,7 @@ project(magcal_wrapper)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
-find_package(oscp_msgs REQUIRED)
+find_package(oscp_imu_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
