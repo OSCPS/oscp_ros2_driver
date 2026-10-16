@@ -2,8 +2,8 @@
 Changelog for package magcal_wrapper
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2026-10-16)
+------------------
 * refactor: depend on renamed oscp_imu_msgs following REP-144 package renames
 * fix: correct license tag to MIT to match bundled license file
 * fix: set maintainer name in package manifest

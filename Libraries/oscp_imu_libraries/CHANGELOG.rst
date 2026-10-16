@@ -2,8 +2,8 @@
 Changelog for package oscp_imu_libraries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2026-10-16)
+------------------
 * refactor: rename package oscp_libraries -> oscp_imu_libraries to follow REP-144
 * fix: set maintainer name in package manifest
 * Contributors: BlueMazer

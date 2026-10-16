@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>magcal_wrapper</name>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <description>ROS 2 wrapper for magnetometer calibration</description>
 
   <maintainer email="rayan@oscp.com">Rayan Raad</maintainer>
