@@ -14,8 +14,8 @@
  * Includes
  **/
 
-#include "oscp_imu.h"
-#include "cobs.h"
+#include "oscp_imu_libraries/oscp_imu.h"
+#include "oscp_imu_libraries/cobs.h"
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>

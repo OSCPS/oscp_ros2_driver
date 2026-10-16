@@ -41,7 +41,7 @@
 #include "oscp_imu_driver/srv/apply_mag_config.hpp"
 
 extern "C" {
-#include "oscp_imu.h"
+#include "oscp_imu_libraries/oscp_imu.h"
 }
 
 /* OSCP ROS2 Node */

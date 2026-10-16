@@ -3,7 +3,7 @@
 
 /* Includes */
 #include "oscp_imu_driver/oscp_imu_config.hpp"
-#include "oscp_imu.h"
+#include "oscp_imu_libraries/oscp_imu.h"
 
 /* Translation functions */
 namespace oscp_imu {

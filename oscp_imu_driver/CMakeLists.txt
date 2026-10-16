@@ -55,13 +55,11 @@ ament_export_dependencies(rosidl_default_runtime)
 target_include_directories(oscp_imu_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/oscp_imu_libraries/include
 )
 
 target_include_directories(counter_tracker PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Libraries/oscp_imu_libraries/include
 )
 
 ament_target_dependencies(oscp_imu_node
