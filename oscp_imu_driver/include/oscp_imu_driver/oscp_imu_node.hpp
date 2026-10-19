@@ -12,7 +12,7 @@
 #include <thread>
 #include <cstdint>
 #include <filesystem>
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 // ROS Messages includes
 #include <sensor_msgs/msg/imu.hpp>
