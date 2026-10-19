@@ -6,6 +6,7 @@ Lightweight, configurable ROS 2 driver for OSCP-family IMUs. The node decodes th
 
 | ROS 2 distro | Branch   | Ubuntu | CI |
 |--------------|----------|--------|----|
+| Lyrical      | `lyrical`  | 26.04  | ![CI](https://github.com/OSCPS/oscp_ros2_driver/actions/workflows/ci.yml/badge.svg?branch=lyrical) |
 | Jazzy        | `jazzy`  | 24.04  | ![CI](https://github.com/OSCPS/oscp_ros2_driver/actions/workflows/ci.yml/badge.svg?branch=jazzy) |
 | Humble       | `humble` | 22.04  | ![CI](https://github.com/OSCPS/oscp_ros2_driver/actions/workflows/ci.yml/badge.svg?branch=humble) |
 
