@@ -288,6 +288,9 @@ OSCPIMUNode::OSCPIMUNode() : rclcpp::Node("oscp_imu_node") {
             [this]() {
                 if (!startup_received_.load()) return;
 
+                // The unit does not stream while it is in CONFIG state
+                if (config_session_active_.load()) return;
+
                 auto now = std::chrono::steady_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_frame_time_).count();
 
@@ -603,24 +606,115 @@ bool OSCPIMUNode::write_float_register(oscp_usr_reg_t reg, float value) {
 
     oscp_err_t err = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len,reg, float_to_u32(value), to_oscp(config_.transport));
 
-    if (err != OSCP_OK) {
-        RCLCPP_ERROR(this->get_logger(),"Failed to create register write command");
+    return send_acked_command(err, cmd, cmd_len, "register write");
+}
+
+/* Configuration Session Functions */
+bool OSCPIMUNode::send_acked_command(oscp_err_t result, uint8_t *cmd, size_t cmd_len, const char *what) {
+    if (result != OSCP_OK) {
+        RCLCPP_ERROR(get_logger(), "Failed to create %s command", what);
         return false;
     }
 
-    int written = write(fd_, cmd, cmd_len);
+    const uint32_t ok_before = cmd_ack_ok_.load();
+    const uint32_t failed_before = cmd_ack_failed_.load();
 
-    RCLCPP_INFO(get_logger(),"Sent command of %ld bytes",cmd_len);
+    const ssize_t written = write(fd_, cmd, cmd_len);
 
-    if (written != static_cast<int>(cmd_len)) {
-        RCLCPP_ERROR(this->get_logger(),"Failed to write register command");
+    if (written != static_cast<ssize_t>(cmd_len)) {
+        RCLCPP_ERROR(get_logger(), "Failed to write %s command", what);
         return false;
     }
 
     tcdrain(fd_);
 
-    return true;
-}    
+    // In CONFIG state the unit answers with a success or failure message; replies can lag by a few hundred ms
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        if (cmd_ack_failed_.load() != failed_before) {
+            RCLCPP_ERROR(get_logger(), "IMU rejected %s command", what);
+            return false;
+        }
+
+        if (cmd_ack_ok_.load() != ok_before) {
+            return true;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    RCLCPP_ERROR(get_logger(), "No response from IMU to %s command", what);
+    return false;
+}
+
+bool OSCPIMUNode::run_config_session(const std::function<bool()> &body) {
+    // WR and SAVE are only accepted in CONFIG state; in OPERATING state the unit ignores them silently
+    std::lock_guard<std::mutex> session_lock(config_session_mutex_);
+    config_session_active_.store(true);
+
+    uint8_t cmd[256];
+    size_t cmd_len = 0;
+
+    oscp_err_t cmd_result = oscp_cmd_config(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    bool ok = send_acked_command(cmd_result, cmd, cmd_len, "CONFIG");
+
+    if (ok) {
+        ok = body();
+    }
+
+    // Always return the unit to OPERATING state
+    cmd_result = oscp_cmd_exit(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    send_command(cmd_result, cmd, cmd_len);
+
+    last_frame_time_ = std::chrono::steady_clock::now();
+    config_session_active_.store(false);
+
+    return ok;
+}
+
+bool OSCPIMUNode::read_user_calibration(oscp_debug_1_t &debug1) {
+    {
+        std::lock_guard<std::mutex> lock(frame_mutex_);
+        has_debug1_ = false;
+        has_debug2_ = false;
+    }
+
+    uint8_t cmd[256];
+    size_t cmd_len = 0;
+
+    // OFD makes the unit send both Debug frames, which hold the current user calibration
+    oscp_err_t cmd_result = oscp_cmd_of(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_DEBUG, to_oscp(config_.transport));
+    if (!send_command(cmd_result, cmd, cmd_len)) {
+        return false;
+    }
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        {
+            std::lock_guard<std::mutex> lock(frame_mutex_);
+            if (has_debug1_) {
+                debug1 = latest_debug1_;
+                return true;
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    RCLCPP_ERROR(get_logger(), "No Debug frame received from IMU");
+    return false;
+}
+
+bool OSCPIMUNode::save_configuration() {
+    uint8_t cmd[256];
+    size_t cmd_len = 0;
+
+    oscp_err_t cmd_result = oscp_cmd_save(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+
+    return send_acked_command(cmd_result, cmd, cmd_len, "SAVE");
+}
 
 bool OSCPIMUNode::verify_startup_config() {
     bool ok = true;
@@ -789,7 +883,31 @@ void OSCPIMUNode::on_frame(const oscp_frame_t *f) {
             has_gnss_ = true;
             break;
         }
-        
+
+        case OSCP_FRAME_DEBUG_1: {
+            std::lock_guard<std::mutex> lock(frame_mutex_);
+            latest_debug1_ = oscp_debug_1(f);
+            has_debug1_ = true;
+            return;
+        }
+
+        case OSCP_FRAME_DEBUG_2: {
+            std::lock_guard<std::mutex> lock(frame_mutex_);
+            latest_debug2_ = oscp_debug_2(f);
+            has_debug2_ = true;
+            return;
+        }
+
+        case OSCP_FRAME_CMD_SUCCESS:
+            cmd_ack_ok_.fetch_add(1);
+            return;
+
+        case OSCP_FRAME_CMD_FAILED:
+        case OSCP_FRAME_CMD_UNKNOWN:
+        case OSCP_FRAME_CMD_NOT_IMPL:
+            cmd_ack_failed_.fetch_add(1);
+            return;
+
         default:
             return;
     }
@@ -808,6 +926,14 @@ uint32_t OSCPIMUNode::float_to_u32(float value) {
     memcpy(&bits, &value, sizeof(float));
 
     return bits;
+}
+
+float OSCPIMUNode::u32_to_float(uint32_t bits) {
+    float value;
+
+    memcpy(&value, &bits, sizeof(float));
+
+    return value;
 }
 
 double OSCPIMUNode::normalize_degrees(double angle) {
@@ -1272,38 +1398,59 @@ bool OSCPIMUNode::stationary_calibrate(double duration) {
         return false;
     }
 
-    float gxb = -(gx / samples);
-    float gyb = -(gy / samples);
-    float gzb = -(gz / samples);
+    // Residual error of the current output. The unit applies sensor_out = sensor_cal - bias_user,
+    // so the measured output already includes the stored bias. Expected output at rest, Z axis up:
+    // 0 dps on the gyroscopes, (0, 0, 1) g on the accelerometers and 0 g on the inclinometers.
+    const double gx_err = gx / samples;
+    const double gy_err = gy / samples;
+    const double gz_err = gz / samples;
 
-    float axb = -(ax / samples);
-    float ayb = -(ay / samples);
-    float azb = 1.0f - (az / samples);
+    const double ax_err = ax / samples;
+    const double ay_err = ay / samples;
+    const double az_err = (az / samples) - 1.0;
 
-    float ixb = -(ix / samples);
-    float iyb = -(iy / samples);
+    const double ix_err = ix / samples;
+    const double iy_err = iy / samples;
 
-    RCLCPP_INFO(get_logger(),"Biases: G %.5f %.5f %.5f A %.5f %.5f %.5f I %.5f %.5f",gxb,gyb,gzb,axb,ayb,azb,ixb,iyb);
+    const bool saved = run_config_session([&]() {
+        oscp_debug_1_t current;
+        if (!read_user_calibration(current)) {
+            return false;
+        }
 
-    write_float_register(OSCP_USR_REG_GXB, gxb);
-    write_float_register(OSCP_USR_REG_GYB, gyb);
-    write_float_register(OSCP_USR_REG_GZB, gzb);
+        // New bias = stored bias + residual error
+        const float gxb = u32_to_float(current.gxb) + gx_err;
+        const float gyb = u32_to_float(current.gyb) + gy_err;
+        const float gzb = u32_to_float(current.gzb) + gz_err;
 
-    write_float_register(OSCP_USR_REG_AXB, axb);
-    write_float_register(OSCP_USR_REG_AYB, ayb);
-    write_float_register(OSCP_USR_REG_AZB, azb);
+        const float axb = u32_to_float(current.axb) + ax_err;
+        const float ayb = u32_to_float(current.ayb) + ay_err;
+        const float azb = u32_to_float(current.azb) + az_err;
 
-    write_float_register(OSCP_USR_REG_IXB, ixb);
-    write_float_register(OSCP_USR_REG_IYB, iyb);
+        const float ixb = u32_to_float(current.ixb) + ix_err;
+        const float iyb = u32_to_float(current.iyb) + iy_err;
 
-    uint8_t cmd[256];
-    size_t cmd_len = 0;
+        RCLCPP_INFO(get_logger(),"Stored biases: G %.5f %.5f %.5f A %.5f %.5f %.5f I %.5f %.5f",
+            u32_to_float(current.gxb),u32_to_float(current.gyb),u32_to_float(current.gzb),
+            u32_to_float(current.axb),u32_to_float(current.ayb),u32_to_float(current.azb),
+            u32_to_float(current.ixb),u32_to_float(current.iyb));
+        RCLCPP_INFO(get_logger(),"New biases: G %.5f %.5f %.5f A %.5f %.5f %.5f I %.5f %.5f",gxb,gyb,gzb,axb,ayb,azb,ixb,iyb);
 
-    // Save calibration
-    oscp_cmd_save(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+        return write_float_register(OSCP_USR_REG_GXB, gxb) &&
+               write_float_register(OSCP_USR_REG_GYB, gyb) &&
+               write_float_register(OSCP_USR_REG_GZB, gzb) &&
+               write_float_register(OSCP_USR_REG_AXB, axb) &&
+               write_float_register(OSCP_USR_REG_AYB, ayb) &&
+               write_float_register(OSCP_USR_REG_AZB, azb) &&
+               write_float_register(OSCP_USR_REG_IXB, ixb) &&
+               write_float_register(OSCP_USR_REG_IYB, iyb) &&
+               save_configuration();
+    });
 
-    write(fd_, cmd, cmd_len);
-    tcdrain(fd_);
+    if (!saved) {
+        RCLCPP_ERROR(get_logger(), "Failed to write biases to the IMU");
+        return false;
+    }
 
     // Force Unzeroed State
     zero_orientation_set_ = false;
@@ -1327,6 +1474,12 @@ void OSCPIMUNode::stationary_calibration_worker(double duration) {
 
 void OSCPIMUNode::stationary_calibrate_callback(const std::shared_ptr<oscp_imu_driver::srv::StationaryCalibrate::Request> request,
     std::shared_ptr<oscp_imu_driver::srv::StationaryCalibrate::Response> response) {
+    if (!(request->duration > 0.0)) {
+        response->success = false;
+        response->message = "Duration must be greater than 0 seconds";
+        return;
+    }
+
     if (stationary_calibration_thread_.joinable()) {
         if (stationary_calibration_active_.load()) {
             response->success = false;
@@ -1470,10 +1623,11 @@ void OSCPIMUNode::apply_mag_config_callback(const std::shared_ptr<oscp_imu_drive
         const float myb = mag["hard_iron"]["y"].as<float>();
         const float mzb = mag["hard_iron"]["z"].as<float>();
 
-        // Read soft-iron matrix
-        // [ MXX  MXY  MXZ ]
-        // [ MYX  MYY  MYZ ]
-        // [ MZX  MZY  MZZ ]
+        // Read soft-iron matrix. The unit applies mag_out = M * (mag_cal - hard_iron) with
+        // (user manual, section 10.5.20):
+        // [ MXX  MYX  MZX ]
+        // [ MXY  MYY  MZY ]
+        // [ MXZ  MYZ  MZZ ]
 
         const auto soft_iron = mag["soft_iron"];
 
@@ -1490,15 +1644,15 @@ void OSCPIMUNode::apply_mag_config_callback(const std::shared_ptr<oscp_imu_drive
         }
 
         const float mxx = soft_iron[0][0].as<float>();
-        const float mxy = soft_iron[0][1].as<float>();
-        const float mxz = soft_iron[0][2].as<float>();
+        const float myx = soft_iron[0][1].as<float>();
+        const float mzx = soft_iron[0][2].as<float>();
 
-        const float myx = soft_iron[1][0].as<float>();
+        const float mxy = soft_iron[1][0].as<float>();
         const float myy = soft_iron[1][1].as<float>();
-        const float myz = soft_iron[1][2].as<float>();
+        const float mzy = soft_iron[1][2].as<float>();
 
-        const float mzx = soft_iron[2][0].as<float>();
-        const float mzy = soft_iron[2][1].as<float>();
+        const float mxz = soft_iron[2][0].as<float>();
+        const float myz = soft_iron[2][1].as<float>();
         const float mzz = soft_iron[2][2].as<float>();
 
         // Log what is about to be written
@@ -1506,44 +1660,31 @@ void OSCPIMUNode::apply_mag_config_callback(const std::shared_ptr<oscp_imu_drive
         RCLCPP_INFO(this->get_logger(),"Hard iron: [%f, %f, %f]",mxb, myb, mzb);
 
         RCLCPP_INFO(this->get_logger(),"Soft iron:");
-        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mxx, mxy, mxz);
-        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",myx, myy, myz);
-        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mzx, mzy, mzz);
+        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mxx, myx, mzx);
+        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mxy, myy, mzy);
+        RCLCPP_INFO(this->get_logger(),"  [%f, %f, %f]",mxz, myz, mzz);
 
-        // Write magnetometer calibration registers
+        // Write magnetometer calibration registers and save configuration to IMU flash
 
-        write_float_register(OSCP_USR_REG_MXB,mxb);
-        write_float_register(OSCP_USR_REG_MYB,myb);
-        write_float_register(OSCP_USR_REG_MZB,mzb);
-        
-        write_float_register(OSCP_USR_REG_MXX,mxx);
-        write_float_register(OSCP_USR_REG_MYX,myx);
-        write_float_register(OSCP_USR_REG_MZX,mzx);
-        write_float_register(OSCP_USR_REG_MXY,mxy);
-        write_float_register(OSCP_USR_REG_MYY,myy);
-        write_float_register(OSCP_USR_REG_MZY,mzy);
-        write_float_register(OSCP_USR_REG_MXZ,mxz);
-        write_float_register(OSCP_USR_REG_MYZ,myz);
-        write_float_register(OSCP_USR_REG_MZZ,mzz);
+        const bool saved = run_config_session([&]() {
+            return write_float_register(OSCP_USR_REG_MXB,mxb) &&
+                   write_float_register(OSCP_USR_REG_MYB,myb) &&
+                   write_float_register(OSCP_USR_REG_MZB,mzb) &&
+                   write_float_register(OSCP_USR_REG_MXX,mxx) &&
+                   write_float_register(OSCP_USR_REG_MYX,myx) &&
+                   write_float_register(OSCP_USR_REG_MZX,mzx) &&
+                   write_float_register(OSCP_USR_REG_MXY,mxy) &&
+                   write_float_register(OSCP_USR_REG_MYY,myy) &&
+                   write_float_register(OSCP_USR_REG_MZY,mzy) &&
+                   write_float_register(OSCP_USR_REG_MXZ,mxz) &&
+                   write_float_register(OSCP_USR_REG_MYZ,myz) &&
+                   write_float_register(OSCP_USR_REG_MZZ,mzz) &&
+                   save_configuration();
+        });
 
-        // Save configuration to IMU flash
-
-        uint8_t cmd[256];
-        size_t cmd_len = 0;
-
-        oscp_cmd_save(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
-
-        const ssize_t written = write(fd_, cmd, cmd_len);
-
-        if (written < 0) {
-            throw std::runtime_error("Failed to write save command to IMU.");
+        if (!saved) {
+            throw std::runtime_error("IMU did not accept the magnetometer calibration.");
         }
-
-        if (static_cast<size_t>(written) != cmd_len) {
-            throw std::runtime_error("Incomplete save command written to IMU.");
-        }
-
-        tcdrain(fd_);
 
         // Success
 
