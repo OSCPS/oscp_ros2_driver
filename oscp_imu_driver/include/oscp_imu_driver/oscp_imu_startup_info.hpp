@@ -12,6 +12,7 @@ struct StartupInfo {
     uint32_t unit_number;
 
     uint8_t operating_mode;
+    uint8_t misalignment_correction;
 
     uint8_t gyro_range;
     uint8_t accel_range;

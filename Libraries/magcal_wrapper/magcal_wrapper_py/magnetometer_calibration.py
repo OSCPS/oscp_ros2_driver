@@ -34,7 +34,7 @@ class MagnetometerCalibrationNode(Node):
         raw_qos = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,history=HistoryPolicy.KEEP_LAST,depth=10,)
 
         self.raw_subscription = self.create_subscription(OscpRaw,"/oscp/raw",self.raw_callback,raw_qos,callback_group=self.callback_group,)
-        self.action_server = ActionServer(self,MagnetometerCalibration,"/DEV/oscp/magnetometer_calibration",execute_callback=self.execute_callback,goal_callback=self.goal_callback,cancel_callback=self.cancel_callback,callback_group=self.callback_group,)
+        self.action_server = ActionServer(self,MagnetometerCalibration,"/oscp/magnetometer_calibration",execute_callback=self.execute_callback,goal_callback=self.goal_callback,cancel_callback=self.cancel_callback,callback_group=self.callback_group,)
         self.get_logger().info("Magnetometer calibration node started")
         self.get_logger().info("Listening on /oscp/raw")
 
