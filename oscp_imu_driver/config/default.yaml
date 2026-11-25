@@ -4,7 +4,7 @@ oscp_imu_node:
     device: "/dev/ttyUSB0"
     baudrate: 921600
     frame_id: "imu_link"
-    pub_accel_in_g: false
+    pub_standard_ros_accel_in_g: false
 
     operating_mode: "LOW"
 
@@ -33,4 +33,4 @@ oscp_imu_node:
     ahrs_convention: "NWU"
     ahrs_heading_source: "NONE"
 
-    misalignment: true
+    misalignment_correction: true

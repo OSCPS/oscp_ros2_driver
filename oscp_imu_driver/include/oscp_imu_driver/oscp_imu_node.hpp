@@ -5,6 +5,7 @@
 // Standards includes
 #include <array>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -135,6 +136,18 @@ private:
     std::atomic<bool> stationary_calibration_active_{false};
     std::atomic<bool> mag_calibrating_{false};
 
+    // Configuration sessions (register writes are only accepted in CONFIG state)
+    std::mutex config_session_mutex_;
+    std::atomic<bool> config_session_active_{false};
+    std::atomic<uint32_t> cmd_ack_ok_{0};
+    std::atomic<uint32_t> cmd_ack_failed_{0};
+
+    // User calibration read back with the OFD command
+    oscp_debug_1_t latest_debug1_;
+    oscp_debug_2_t latest_debug2_;
+    bool has_debug1_{false};
+    bool has_debug2_{false};
+
     // Calibration Threads
     std::thread stationary_calibration_thread_;
     std::thread mag_calibration_thread_;
@@ -152,11 +165,18 @@ private:
     bool write_float_register(oscp_usr_reg_t reg, float value);
     bool verify_startup_config();
 
+    // Configuration Session Functions
+    bool send_acked_command(oscp_err_t result, uint8_t *cmd, size_t cmd_len, const char *what);
+    bool run_config_session(const std::function<bool()> &body);
+    bool read_user_calibration(oscp_debug_1_t &debug1);
+    bool save_configuration();
+
     static void on_frame_trampoline(const oscp_frame_t *f, void *ctx);
     void on_frame(const oscp_frame_t *f);
 
     // Utility Functions
     uint32_t float_to_u32(float value);
+    float u32_to_float(uint32_t bits);
     double normalize_degrees(double angle);
     
     // Publishers Functions
