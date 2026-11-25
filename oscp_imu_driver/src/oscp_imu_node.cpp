@@ -541,7 +541,15 @@ bool OSCPIMUNode::configure_imu() {
  
     cmd_result = oscp_cmd_wr(cmd, sizeof(cmd), &cmd_len, OSCP_USR_REG_AHP, to_oscp(config_.accel_hpf), to_oscp(config_.transport));
     send_command(cmd_result, cmd, cmd_len);
- 
+
+    // Factory misalignment correction for gyroscopes and accelerometers
+    if (config_.misalignment_correction) {
+        cmd_result = oscp_cmd_enable_mcorr(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    } else {
+        cmd_result = oscp_cmd_disable_mcorr(cmd, sizeof(cmd), &cmd_len, to_oscp(config_.transport));
+    }
+    send_command(cmd_result, cmd, cmd_len);
+
     if (config_.publish_oscp_raw || config_.publish_standard_ros) {
         cmd_result = oscp_cmd_enable_oft(cmd, sizeof(cmd), &cmd_len, OSCP_FRAME_SEL_RAW, to_oscp(config_.transport));
         send_command(cmd_result, cmd, cmd_len);
@@ -792,6 +800,15 @@ bool OSCPIMUNode::verify_startup_config() {
         ok = false;
     }
 
+    const uint8_t expected_mcorr = config_.misalignment_correction ? OSCP_MISALIGNMENT_CORR_ENABLED : OSCP_MISALIGNMENT_CORR_DISABLED;
+
+    RCLCPP_INFO(get_logger(), "Misalignment Correction: Expected: %u | Received: %u", expected_mcorr, startup.misalignment_correction);
+
+    if (expected_mcorr != startup.misalignment_correction) {
+        RCLCPP_ERROR(get_logger(), "Misalignment correction mismatch");
+        ok = false;
+    }
+
     return ok;
 }
 
@@ -819,6 +836,7 @@ void OSCPIMUNode::on_frame(const oscp_frame_t *f) {
                 startup_info_.unit_number = startup.unit_number;
 
                 startup_info_.operating_mode = (startup.header_byte >> 3) & 0x07;
+                startup_info_.misalignment_correction = (startup.header_byte >> 6) & 0x03;
 
                 startup_info_.gyro_range = startup.gyro_dr;
                 startup_info_.accel_range = startup.accel_dr;

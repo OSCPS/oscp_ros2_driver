@@ -60,7 +60,7 @@ namespace oscp_imu {
         FilterCutoff accel_lpf = FilterCutoff::C3;
         FilterCutoff accel_hpf = FilterCutoff::C0;
 
-        bool misalignment_correction = false;
+        bool misalignment_correction = true;
 
         AHRSConvention ahrs_convention = AHRSConvention::NWU;
         AHRSHeadingSource ahrs_heading = AHRSHeadingSource::NONE;
